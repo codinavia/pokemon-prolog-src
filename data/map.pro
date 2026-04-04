@@ -68,4 +68,4 @@ city(A, [square, store, hospital]):- \+ gymnasium(A, _, _, _, _).
 
 % prove cityA is connected to cityB (unidirectional)
 connected(A, B):- route(_, A, B, _, _).
-connected(A, B):- route(_, B, C, _, _).
+connected(A, B):- route(_, B, A, _, _).
