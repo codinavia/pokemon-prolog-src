@@ -106,9 +106,9 @@ egg(gastly,     10000).
 egg(litwick,    10000).
 
 % baseStats(pokemon,    attack,     health)
-baseStats(eevee,        4,          20)
-baseStats(pidgey,       5,          22)
-baseStats(jigglypuff,   4,          25)
+baseStats(eevee,        4,          20).
+baseStats(pidgey,       5,          22).
+baseStats(jigglypuff,   4,          25).
 
 % ===== FIRE =====
 baseStats(charmander,   6,          24).
