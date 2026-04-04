@@ -15,11 +15,12 @@ trainer(113,     alyssa,        0,          flareon,           no).
 trainer(114,     larry,         0,          wigglytuff,        no).
 trainer(115,     carol,         0,          pidgeotto,         no).
 trainer(116,     trent,         0,          ninetales,         no).
-trainer(127,     shayla,        0,          ivysaur,           no).
-trainer(128,     clarissa,      0,          gloom,             no).
-trainer(129,     robert,        0,          chandelure,        no).
+trainer(117,     shayla,        0,          ivysaur,           no).
+trainer(118,     clarissa,      0,          gloom,             no).
+trainer(119,     robert,        0,          chandelure,        no).
 trainer(120,     colin,         0,          pidgeot,           no).
 trainer(121,     angelica,      0,          eevee,             no).
 trainer(122,     jennifer,      0,          charizard,         no).
 trainer(123,     jenna,         0,          poliwrath,         no).
 trainer(124,     carlos,        0,          gengar,            no).
+trainer(125,     alyssa,        0,          mimikyu,           no)
