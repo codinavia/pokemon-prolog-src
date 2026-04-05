@@ -8,8 +8,9 @@
 
 % ==== HELPERS ====
 % take first N elements of a list
+take(0, _, []).
 take(_, [], []).
-take(N, [H | T], [H | R]):-
+take(N, [H | T], [H | R]) :-
     N > 0,
     N1 is N - 1,
     take(N1, T, R).
@@ -26,26 +27,47 @@ generateTag(Tag):-
     Next is + 1,
     asserta(nextTag(Next)).
 
+% mark as learned moves in a given list
+learnMoves(_, [], []).
+
+learnMoves(Learned, [M-locked | T], [M-learned | R]) :-
+    member(M, Learned),
+    learnMoves(Learned, T, R).
+
+learnMoves(Learned, [M-locked | T], [M-forgotten | R]) :-
+    \+ member(M, Learned),
+    move(M, _, _, ML),
+    findall(LL, (member(LM, Learned), move(LM, _, _, LL)), LLs),
+    min_list(LLs, MinLL),
+    ML =< MinLL,
+    learnMoves(Learned, T, R).
+
+learnMoves(Learned, [M-S | T], [M-S | R]) :-
+    learnMoves(Learned, T, R).
+
 % ==== POKEMON ====
 level(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
 
 % learns move at level ?
-learns(Type, Move, Level):- move(Move, Type, _, Level).
-learns(_, Move, Level):- move(Move, normal, _, Level).
+learnsAt(Type, Move, Level):- move(Move, Type, _, Level).
+learnsAt(_, Move, Level):- move(Move, normal, _, Level).
 
-% select the four most recent moves given level and pokemon type
-encounterMoves(Pokemon, Level, Moves):-
+% available moves for a pokemon given type
+availableMoves(Type, Moves):- findall(M-locked, (move(M, Type, _, _) ; move(M, normal, _, _)), M), sort(M, Moves).
+
+% mark the four most recent moves as learned given level and pokemon type
+pokemonMoves(Pokemon, Level, Moves):-
     type(Pokemon, Type),
-    findall(MoveLevel-Move, (learns(Type, Move, MoveLevel), MoveLevel =< Level), AllMoves),
-    sort(0, @>=, AllMoves, Sorted),
-    take(4, Sorted, Top4),
-    pairs_values(Top4, Moves).
+    availableMoves(Type, AllMoves),
+    findall(MoveLevel-Move, (learnsAt(Type, Move, MoveLevel), MoveLevel =< Level), A),
+    sort(0, @>=, A, S),
+    take(4, S, T),
+    pairs_values(T, M),
+    learnMoves(M, AllMoves, Moves).
 
 % get scaled stats
 scaledAttack(BaseAtk, Level, Attack) :- Attack is BaseAtk + (Level * 2).
 scaledHP(BaseHP, Level, MaxHP) :- MaxHP is BaseHP + (Level * 3).
-
-% 
 
 % ==== PLAYER ====
 % player(money, [team])
@@ -80,20 +102,26 @@ growEgg(Route, [Tag-Type | T]):-
     asserta(playerEggs(Tag, Pokemon, NewDistance)).
 
 % check if any eggs are about to hatch
-checkEgg([Tag-Type | T]):-
+checkEgg([], []).
+checkEgg([Tag-Type | T], [Tag | R]):-
     Type == egg,
     playerEggs(Tag, Pokemon, Distance),
     Distance == 0,
-
-    hatchEgg(Tag).
+    checkEgg(T, R).
 
 hatchEgg(Tag):-
     playerEggs(Tag, Pokemon, _),
-    baseStats(Pokemon, Atk, HP),
-    asserta(owned(Tag, Pokemon, 0, Atk, HP, 0, [])).
+    baseStats(Pokemon, BaseAtk, BaseHP),
+    random_between(2, 4, Level),
+    pokemonMoves(Pokemon, Level, Moves),
+    retract(playerEggs(Tag, _, _)),
+    asserta(owned(Tag, Pokemon, Level, Atk, HP, 0, Moves)).
 
 % owned(tag, pokemon, level, atk, hp, exp, moves)
 owned(none, none, none, none, none, none, none).
+
+% catch(pokemon)
+catch()
 
 % ==== BATTLE LOGIC ====
 % enemy(pokemon, atk,   hp,     moves)
@@ -114,6 +142,6 @@ encounter(Route, T):-
     baseStats(Pokemon, BaseAtk, BaseHP),
     scaledAttack(BaseAtk, Level, Attack),
     scaledHP(BaseHP, Level, HP),
-    encounterMoves(Pokemon, Level, Moves),
+    learnMoves(Pokemon, Level, Moves),
     retractall(enemy(_, _, _, _)),
     asserta(enemy(Pokemon, Atk, HP, Moves)).

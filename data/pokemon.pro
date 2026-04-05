@@ -1,6 +1,6 @@
 % types
 % ===== NORMAL =====
-type(eeve,          normal).
+type(eevee,          normal).
 type(pidgey,        normal).
 type(pidgeotto,     normal).
 type(pidgeot,       normal).
