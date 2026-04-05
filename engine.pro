@@ -19,6 +19,13 @@ randomPokemon(O):-
     findall(X, type(X, _), All),
     random_member(O, All).
 
+% generate tag
+nextTag(1).
+generateTag(Tag):- 
+    retract(nextTag(Tag)),
+    Next is + 1,
+    asserta(nextTag(Next)).
+
 % ==== POKEMON ====
 level(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
 
@@ -38,9 +45,22 @@ encounterMoves(Pokemon, Level, Moves):-
 scaledAttack(BaseAtk, Level, Attack) :- Attack is BaseAtk + (Level * 2).
 scaledHP(BaseHP, Level, MaxHP) :- MaxHP is BaseHP + (Level * 3).
 
+% 
+
 % ==== PLAYER ====
+% player(money, [team])
+player(0, []).
+
+% player state
+traveling(none, none, none).
+battling(none, none).
+idling(map).
+
 % active pokemon
 activePokemon(none, none).
+
+% eggs player has aquired
+playerEggs(none, none, none).
 
 % default location
 location(littleroot, square).
@@ -49,6 +69,31 @@ location(littleroot, square).
 travel(City, Location) :-
     retractall(location(_, _)),
     asserta(location(City, Location)).
+
+% update egg distance
+growEgg(Route, [Tag-Type | T]):-
+    Type == egg,
+    playerEggs(Tag, Pokemon, CurrentDistance),
+    route(Route, _, _, RouteDistance, _),
+    NewDistance is CurrentDistance - min(RouteDistence, CurrentDistance), 
+    retract(playerEggs(Tag, Pokemon, _)),
+    asserta(playerEggs(Tag, Pokemon, NewDistance)).
+
+% check if any eggs are about to hatch
+checkEgg([Tag-Type | T]):-
+    Type == egg,
+    playerEggs(Tag, Pokemon, Distance),
+    Distance == 0,
+
+    hatchEgg(Tag).
+
+hatchEgg(Tag):-
+    playerEggs(Tag, Pokemon, _),
+    baseStats(Pokemon, Atk, HP),
+    asserta(owned(Tag, Pokemon, 0, Atk, HP, 0, [])).
+
+% owned(tag, pokemon, level, atk, hp, exp, moves)
+owned(none, none, none, none, none, none, none).
 
 % ==== BATTLE LOGIC ====
 % enemy(pokemon, atk,   hp,     moves)

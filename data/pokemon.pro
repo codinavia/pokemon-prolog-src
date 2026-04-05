@@ -93,11 +93,11 @@ egg(mimikyu,    1000).
 egg(eevee,      2000).
 egg(pidgey,     2000).
 egg(jigglypuff, 2000).
-egg(charmander, 5000).  
-egg(vulpix,     5000).  
+egg(charmander, 5000).
+egg(vulpix,     5000).
 egg(ponyta,     5000).
-egg(psyduck,    5000).    
-egg(poliwag,    5000). 
+egg(psyduck,    5000).
+egg(poliwag,    5000).
 egg(squirtle,   5000).
 egg(bellsprout, 5000). 
 egg(oddish,     5000).  

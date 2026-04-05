@@ -23,4 +23,4 @@ trainer(121,     angelica,      0,          eevee,             no).
 trainer(122,     jennifer,      0,          charizard,         no).
 trainer(123,     jenna,         0,          poliwrath,         no).
 trainer(124,     carlos,        0,          gengar,            no).
-trainer(125,     alyssa,        0,          mimikyu,           no)
+trainer(125,     alyssa,        0,          mimikyu,           no).
