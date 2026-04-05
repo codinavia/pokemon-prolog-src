@@ -121,7 +121,8 @@ hatchEgg(Tag):-
 owned(none, none, none, none, none, none, none).
 
 % catch(pokemon)
-catch()
+catch(Pokemon):-
+    enemy(Pokemon, Atk, CurrentHP, Moves)
 
 % ==== BATTLE LOGIC ====
 % enemy(pokemon, atk,   hp,     moves)
