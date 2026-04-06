@@ -130,7 +130,7 @@ baseStats(gastly,       5,          22).
 baseStats(litwick,      4,          19).
 baseStats(mimikyu,      4,          20).
 
-% move(attack power, level)
+% move(move, type, attack power, level)
 % ===== NORMAL =====
 move('Tackle',          normal, 1,  1).
 move('Quick Attack',    normal, 1,  4).
@@ -169,3 +169,7 @@ move('Shadow Sneak',    ghost,  40, 12).
 move('Shadow Claw',     ghost,  70, 18).
 move('Shadow Ball',     ghost,  80, 24).
 move('Phantom Force',   ghost,  80, 30).
+
+weakTo(X, Y):- type(X, water), move(Y, grass, _, _).
+weakTo(X, Y):- type(X, ghost), move(Y, ghost, _, _).
+weakTo(X, Y):- type(X, fire), move(Y, water, _, _).

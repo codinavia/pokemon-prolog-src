@@ -1,6 +1,6 @@
 % ==== LOAD FILES ====
 % dynamics
-:- consult('engine/dynamics.pro').
+:- consult('data/dynamics.pro').
 % data
 :- consult('data/map.pro').
 :- consult('data/pokemon.pro').
@@ -21,10 +21,10 @@ randomPokemon(O):-
     random_member(O, All).
 
 % generate tag
-nextTag(1).
-generateTag(Tag):- 
+% nextTag(1).
+generateTag(Tag):-
     retract(nextTag(Tag)),
-    Next is + 1,
+    Next is Tag + 1,
     asserta(nextTag(Next)).
 
 % mark as learned moves in a given list
@@ -45,8 +45,18 @@ learnMoves(Learned, [M-locked | T], [M-forgotten | R]) :-
 learnMoves(Learned, [M-S | T], [M-S | R]) :-
     learnMoves(Learned, T, R).
 
+% return list with only learned moves
+getLearned([], []).
+getLearned([M-learned | T], [M | R]):- getLearned(T, R).
+
+% show player learned moves only
+showLearned(Tag):- owned(Tag, _, _, _, _, _, _, _, Moves), getLearned(Moves, Learned).
+
+% select move for player
+selectMove(Move):- retract(hitWith(_)), asserta(hitWith(Move)).
+
 % ==== POKEMON ====
-level(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
+nextLevel(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
 
 % learns move at level ?
 learnsAt(Type, Move, Level):- move(Move, Type, _, Level).
@@ -69,17 +79,30 @@ pokemonMoves(Pokemon, Level, Moves):-
 scaledAttack(BaseAtk, Level, Attack) :- Attack is BaseAtk + (Level * 2).
 scaledHP(BaseHP, Level, MaxHP) :- MaxHP is BaseHP + (Level * 3).
 
+% pokemon state
+pokemonHealth(CurrentHP, MaxHP, healthy):-
+    Porcentage is (CurrentHP / MaxHP) * 100,
+    Porcentage >= 50.
+
+pokemonHealth(CurrentHP, MaxHP, weak):-
+    Porcentage is (CurrentHP / MaxHP) * 100,
+    Porcentage >= 20,
+    Porcentage < 50.
+
+pokemonHealth(CurrentHP, _, low):- CurrentHP >= 1.
+pokemonHealth(0, _, fainted).
+
 % ==== PLAYER ====
-% player(money, [team])
-player(0, []).
+% backpack(money, [pokeballs], [team])
+backpack(0, [], []).
 
 % player state
-traveling(none, none, none).
+traveling(none).
 battling(none, none).
 idling(map).
 
 % active pokemon
-activePokemon(none, none).
+activePokemon(none).
 
 % eggs player has aquired
 playerEggs(none, none, none).
@@ -113,20 +136,71 @@ hatchEgg(Tag):-
     playerEggs(Tag, Pokemon, _),
     baseStats(Pokemon, BaseAtk, BaseHP),
     random_between(2, 4, Level),
+    scaledAttack(BaseAtk, Level, Atk),
+    scaledHP(BaseHP, Level, HP),
     pokemonMoves(Pokemon, Level, Moves),
     retract(playerEggs(Tag, _, _)),
-    asserta(owned(Tag, Pokemon, Level, Atk, HP, 0, Moves)).
+    asserta(owned(Tag, Pokemon, Level, Atk, HP, HP, 0, Moves)).
 
-% owned(tag, pokemon, level, atk, hp, exp, moves)
-owned(none, none, none, none, none, none, none).
+% owned(tag, pokemon, state, level, atk, current-hp, max-hp, exp, moves)
+% owned(none, none, none, none, none, none, none, none, none).
 
 % catch(pokemon)
-catch(Pokemon):-
-    enemy(Pokemon, Atk, CurrentHP, Moves)
+attemptCatch(Pokemon, Pokeball):-
+    usePokeball(Pokeball),
+    enemy(Pokemon, Level, Atk, CurrentHP, MaxHP, Moves),
+    catchChance(CurrentHP, MaxHP, Chance),
+    random_between(1, 100, Roll),
+    Roll =< Chance,
+    catchSuccess(Pokemon, Level, Atk, CurrentHP, MaxHP, Moves).
 
-% ==== BATTLE LOGIC ====
-% enemy(pokemon, atk,   hp,     moves)
-enemy(none, none, none, none).
+catchSuccess(Pokemon, Level, Atk, CurrentHP, MaxHP, Moves):-
+    generateTag(Tag),
+
+    % random experience
+    nextLevel(Level, U),
+    random_between(0, U, Exp),
+    pokemonHealth(CurrentHP, MaxHP, State),
+
+    % catch pokemon
+    retract(enemy(_, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves)).
+
+catchChance(CurrentHP, MaxHP, Chance):-
+    LostHP is abs(((CurrentHP / MaxHP) * 100) - 100),
+    Chance is 50 + (LostHP / 15) * 10.
+
+% pokeballs
+usePokeball(P):-
+    backpack(Money, Pokeballs, Team),
+    select(P, Pokeballs, New),
+
+    % update
+    retract(backpack(_, _, _)),
+    assert(backpack(Money, New, Team)).
+
+chooseStarter(Pokemon):-
+    generateTag(Tag),
+
+    % pokemon stats
+    baseStats(Pokemon, BaseAtk, BaseHP),
+    random_between(2, 4, Level),
+    scaledAttack(BaseAtk, Level, Atk),
+    scaledHP(BaseHP, Level, HP),
+    pokemonMoves(Pokemon, Level, Moves),
+
+    retract(owned(_, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)).
+
+healPokemon(Tag):-
+    owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
+
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, MaxHP, Exp, Moves)).
+
+% ==== RANDOM ENCOUNTER ====
+% enemy(pokemon, level, atk, current-hp, max-hp, moves)
+enemy(none, none, none, none, none, none).
 
 % generate random encounter of type T
 % 0 -> wild pokemon
@@ -139,10 +213,155 @@ encounter(Route, T):-
     random_between(L, U, Level),
 
     % set pokemon stats
-    random(Pokemon),
+    randomPokemon(Pokemon),
     baseStats(Pokemon, BaseAtk, BaseHP),
-    scaledAttack(BaseAtk, Level, Attack),
+    scaledAttack(BaseAtk, Level, Atk),
     scaledHP(BaseHP, Level, HP),
     learnMoves(Pokemon, Level, Moves),
-    retractall(enemy(_, _, _, _)),
-    asserta(enemy(Pokemon, Atk, HP, Moves)).
+    retractall(enemy(_, _, _, _, _, _)),
+    asserta(enemy(Pokemon, Level, Atk, HP, HP, Moves)).
+
+encounter(Route, T):-
+    Type == 1,
+    route(Route, _, _, _, Difficulty),
+    difficulty(Difficulty, L, U),
+    random_between(L, U, Level),
+
+    % trainer
+    random_between(50, 250, Money),
+    retract(trainer(Route, Trainer, _, Pokemon, Defeated)),
+    asserta(trainer(Route, Trainer, Money, Pokemon, Defeated)),
+
+    % set pokemon stats
+    baseStats(Pokemon, BaseAtk, BaseHP),
+    scaledAttack(BaseAtk, Level, Atk),
+    scaledHP(BaseHP, Level, HP),
+    learnMoves(Pokemon, Level, Moves),
+    retractall(enemy(_, _, _, _, _, _)),
+    asserta(enemy(Pokemon, Level, Atk, HP, HP, Moves)).
+
+% ==== BATTLE LOGIC ====
+% hit enemy
+hitWith(none).
+
+hitEnemy():-
+    enemy(Pokemon, Level, EnemyAtk, CurrentHP, MaxHP, Moves),
+    
+    % get active pokemon attack
+    activePokemon(Tag),
+    owned(Tag, _, _, _, Atk, _, _, _, _),
+
+    % calculate damage done
+    hitWith(Move),
+    weakTo(Pokemon, Move),
+    move(Move, _, MoveAtk, _),
+    Damade is Atk * MoveAtk * 2,
+    
+    % assert new hp,
+    NewHP is CurrentHP - min(Damage, CurrentHP),
+    retract(enemy(_, _, _, _, _, _)),
+    asserta(enemy(Pokemon, Level, EnemyAtk, NewHP, MaxHP, Moves)).
+
+hitEnemy():-
+    enemy(Pokemon, Level, EnemyAtk, CurrentHP, MaxHP, Moves),
+    
+    % get active pokemon attack
+    activePokemon(Tag),
+    owned(Tag, _, _, _, Atk, _, _, _, _),
+
+    % calculate damage done
+    hitWith(Move),
+    move(Move, _, MoveAtk, _),
+    Damade is Atk * MoveAtk,
+    
+    % assert new hp,
+    NewHP is CurrentHP - min(Damage, CurrentHP),
+    retract(enemy(_, _, _, _, _, _)),
+    asserta(enemy(Pokemon, Level, EnemyAtk, NewHP, MaxHP, Moves)).
+
+hitPlayer():-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
+
+    % get enemy stats and move
+    enemy(_, _, EnemyAtk, _, _, Moves),
+    getLearned(Moves, Learned),
+    random_member(Move, Learned),
+
+    % calculate damage done
+    weakTo(Pokemon, Move),
+    move(Move, _, MoveAtk, _),
+    Damade is EnemyAtk * MoveAtk * 2,
+    
+    % assert new hp,
+    NewHP is CurrentHP - min(Damage, CurrentHP),
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, State, Level, Atk, NewHP, MaxHP, Exp, Moves)).
+
+hitPlayer(Move):-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
+
+    % get enemy stats and move
+    enemy(_, _, EnemyAtk, _, _, _),
+
+    % calculate damage done
+    move(Move, _, MoveAtk, _),
+    Damade is EnemyAtk * MoveAtk,
+    
+    % assert new hp,
+    NewHP is CurrentHP - min(Damage, CurrentHP),
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, State, Level, Atk, NewHP, MaxHP, Exp, Moves)).
+
+enemyMove(Move):-
+    enemy(_, _, _, _, _, Moves),
+    getLearned(Moves, Learned),
+    random_member(Move, Learned).
+
+% check if either pokemon has fainted
+fainted(enemy):- enemy(_, _, _, HP, _, _), HP == 0.
+
+fainted(player) :-
+    activePokemon(Tag),
+    owned(Tag, _, _, _, _, HP, _, _, _),
+    HP == 0.
+
+% winner(player | enemy, pokemon | trainer)
+winner(none, none).
+
+finishBattle():-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
+    pokemonHealth(CurrentHP, MaxHP, NewState),
+
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, Exp, Moves)),
+    
+    % update based on winner
+    winner(player, trainer),
+    battling(Route, CityA),
+    trainer(Route, Trainer, Money, Pokemon, _),
+
+    retract(trainer(Route, _, _, _, _)),
+    asserta(trainer(Route, Trainer, Money, Pokemon, yes)),
+
+    NewMoney is Money * 0.5,
+    retract(player(CurrentMoney, Pokeballs, Team)),
+    assert(player(NewMoney, Pokeballs, Team)),
+    
+    % change location to destined city
+    travel(CityA, square).
+
+finishBattle():-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
+    pokemonHealth(CurrentHP, MaxHP, NewState),
+
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, Exp, Moves)),
+    
+    % update based on winner
+    winner(trainer, trainer).
+
+finishBattle().
