@@ -3,7 +3,7 @@ starters([charmander, bulbasaur, squirtle]).
 
 % types
 % ===== NORMAL =====
-type(eevee,          normal).
+type(eevee,         normal).
 type(pidgey,        normal).
 type(pidgeotto,     normal).
 type(pidgeot,       normal).

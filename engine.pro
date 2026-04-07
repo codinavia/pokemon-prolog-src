@@ -97,7 +97,7 @@ pokemonHealth(0, _, fainted).
 % player state
 traveling(none).
 battling(none, none).
-idling(map).
+(map).
 
 % move to another city
 travel(City, Location) :-
@@ -317,21 +317,38 @@ fainted(player) :-
     HP == 0.
 
 % winner(player | enemy, pokemon | trainer)
+checkWinner(Round):-
+    Round == 4,
+
+    % check hp lost for opponent
+    enemy(_, _, _, EnemyCurrent, EnemyMax, _),
+    EnemyLost is (100 - (EnemyCurrent / EnemyMax * 100));
+
+    % check hp lost for player
+
+    % enemy(pokemon, level, atk, current-hp, max-hp, moves)
+
+
+
 winner(none, none).
 
-finishBattle():-
+updateState():-
     activePokemon(Tag),
     owned(Tag, Pokemon, _, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
     pokemonHealth(CurrentHP, MaxHP, NewState),
 
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
-    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, Exp, Moves)),
+    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, Exp, Moves)).
+
+finishBattle():-
+    updateState(),
+    retract(enemy(_, _, _, _, _, _)),
     
     % update based on winner
     winner(player, trainer),
     battling(Route, CityA),
     trainer(Route, Trainer, Money, Pokemon, _),
-    backpack(CurrentMoney, POkeballs, Team),
+    backpack(CurrentMoney, Pokeballs, Team),
     
     NewMoney is CurrentMoney + (Money * 0.5),
 
@@ -340,23 +357,6 @@ finishBattle():-
 
     retract(backpack(_, _, _)),
     asserta(backpack(NewMoney, Pokeballs, Team)),
-
-    retract(enemy(_, _, _, _, _, _)),
     
     % change location to destined city
     travel(CityA, square).
-
-finishBattle():-
-    activePokemon(Tag),
-    owned(Tag, Pokemon, _, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
-    pokemonHealth(CurrentHP, MaxHP, NewState),
-
-    retract(owned(Tag, _, _, _, _, _, _, _, _)),
-    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, Exp, Moves)),
-    
-    % update based on winner
-    winner(trainer, trainer),
-
-    retract(enemy(_, _, _, _, _, _)).
-
-finishBattle().

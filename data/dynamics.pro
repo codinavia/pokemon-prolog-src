@@ -3,6 +3,10 @@
 :- dynamic owned/9.
 :- dynamic enemy/6.
 
+% ==== TRAINERS ====
+:- dynamic gymLeader/4.
+:- dynamic trainer/5.
+
 % ==== PLAYER ====
 :- dynamic backpack/3.
 :- dynamic location/2.
