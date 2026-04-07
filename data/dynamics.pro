@@ -2,6 +2,7 @@
 :- dynamic nextTag/1.
 :- dynamic owned/9.
 :- dynamic enemy/6.
+:- dynamic ownedEvolutions/2.
 
 % ==== TRAINERS ====
 :- dynamic gymLeader/4.
@@ -17,6 +18,7 @@
 :- retractall(backpack(_, _, _)), asserta(backpack(0, [], [])).
 :- retractall(activePokemon(_)), asserta(activePokemon(none)).
 :- retractall(playerEggs(_, _, _)), asserta(playerEggs(none, none, none)).
+:- retractall(ownedEvolutions(_, _)), asserta(ownedEvolutions(none, [])).
 
 :- retractall(nextTag(_)), asserta(nextTag(1)).
 :- retractall(owned(_, _, _, _, _, _, _, _, _)), asserta(owned(none, none, none, none, none, none, none, none, none)).
