@@ -332,7 +332,8 @@ encounter(Route, T):-
     asserta(trainer(Route, Trainer, Money, Pokemon, Defeated)),
 
     % set pokemon stats
-    baseStats(Pokemon, BaseAtk, BaseHP),
+    baseForm(Pokemon, Base),
+    baseStats(Base, BaseAtk, BaseHP),
     scaledAttack(BaseAtk, Level, Atk),
     scaledHP(BaseHP, Level, HP),
     learnMoves(Pokemon, Level, Moves),
