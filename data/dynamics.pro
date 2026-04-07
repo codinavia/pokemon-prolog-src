@@ -19,6 +19,7 @@
 :- retractall(activePokemon(_)), asserta(activePokemon(none)).
 :- retractall(playerEggs(_, _, _)), asserta(playerEggs(none, none, none)).
 :- retractall(ownedEvolutions(_, _)), asserta(ownedEvolutions(none, [])).
+:- retractall(traveling(_, _)), asserta(traveling(none, none)).
 
 :- retractall(nextTag(_)), asserta(nextTag(1)).
 :- retractall(owned(_, _, _, _, _, _, _, _, _)), asserta(owned(none, none, none, none, none, none, none, none, none)).

@@ -15,9 +15,9 @@ take(N, [H | T], [H | R]) :-
     N1 is N - 1,
     take(N1, T, R).
 
-% find all posible pokemon and return a random one
+% find all posible (not evolved) pokemon and return a random one
 randomPokemon(O):-
-    findall(X, type(X, _), All),
+    findall(X, egg(X, _), All),
     random_member(O, All).
 
 % generate tag
@@ -30,11 +30,11 @@ generateTag(Tag):-
 % mark moves as learned or forgotten in a given list
 learnMoves(_, [], []).
 
-learnMoves(Learned, [M-locked | T], [M-learned | R]) :-
+learnMoves(Learned, [M-locked | T], [M-learned | R]):-
     member(M, Learned),
     learnMoves(Learned, T, R).
 
-learnMoves(Learned, [M-locked | T], [M-forgotten | R]) :-
+learnMoves(Learned, [M-locked | T], [M-forgotten | R]):-
     \+ member(M, Learned),
     move(M, _, _, ML),
     findall(LL, (member(LM, Learned), move(LM, _, _, LL)), LLs),
@@ -54,6 +54,14 @@ showLearned(Tag, Learned):- owned(Tag, _, _, _, _, _, _, _, Moves), getLearned(M
 
 % select move for player
 selectMove(Move):- retract(hitWith(_)), asserta(hitWith(Move)).
+
+% given (base) pokemon level get its current evolution
+currentEvolution(Pokemon, Level, Result) :-
+    evolves(Pokemon, Evolution, Required),
+    Level >= Required,
+    currentEvo(Evolution, Level, Result).
+
+currentEvolution(Pokemon, _, Pokemon).
 
 % ==== POKEMON ====
 nextLevel(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
@@ -75,22 +83,33 @@ pokemonMoves(Pokemon, Level, Moves):-
     pairs_values(T, M),
     learnMoves(M, AllMoves, Moves).
 
+% base form given an evolved pokemon (or not)
+baseForm(Pokemon, Base) :-
+    \+ evolves(_, Pokemon, _),
+    Base = Pokemon.
+
+baseForm(Pokemon, Base) :-
+    evolves(Pre, Pokemon, _),
+    baseForm(Pre, Base).
+
 % all evolutions for a pokemon
-allEvolutions(Pokemon, Evolutions):- 
-    findall(E-locked, reachable(Pokemon, E), Evolutions).
+allEvolutions(Pokemon, Evolutions):- findall(E-locked, reachable(Pokemon, E), Evolutions).
 
 % direct evolution
-reachable(Pokemon, E) :-
-    evolves(Pokemon, E, _).
+reachable(Pokemon, E):- evolves(Pokemon, E, _).
 
 % transitive — goes through the chain
-reachable(Pokemon, E) :-
-    evolves(Pokemon, Mid, _),
-    reachable(Mid, E).
+reachable(Pokemon, E):- evolves(Pokemon, Mid, _), reachable(Mid, E).
 
 % mark evolution as evolved
-pokemonEvolutions(Pokemon, Level, Evolutions):-
-    
+pokemonEvolutions(_, _, [], []).
+
+pokemonEvolutions(Pokemon, Level, [E-locked | T], [E-evolved | R]):-
+    evolves(Pokemon, E, L),
+    L =< Level,
+    pokemonEvolutions(Pokemon, Level, T, R).
+
+pokemonEvolutions(Pokemon, Level, [E-S | T], [E-S | R]):- pokemonEvolutions(Pokemon, Level, T, R).
 
 % get scaled stats
 scaledAttack(BaseAtk, Level, Attack) :- Attack is BaseAtk + (Level * 2).
@@ -174,9 +193,15 @@ catchSuccess(Pokemon, Level, Atk, CurrentHP, MaxHP, Moves):-
     random_between(0, U, Exp),
     pokemonHealth(CurrentHP, MaxHP, State),
 
+    % get pokemon evolutions
+    baseForm(Pokemon, Base),
+    allEvolutions(Pokemon, AllEvolutions),
+    pokemonEvolutions(Pokemon, Level, AllEvolutions, Evolutions),
+
     % catch pokemon
     retract(enemy(_, _, _, _, _, _)),
-    asserta(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves)).
+    asserta(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves)),
+    asserta(ownedEvolutions(Tag, Evolutions)).
 
 catchChance(CurrentHP, MaxHP, Chance):-
     LostHP is abs(((CurrentHP / MaxHP) * 100) - 100),
@@ -202,7 +227,14 @@ chooseStarter(Pokemon):-
     scaledHP(BaseHP, Level, HP),
     pokemonMoves(Pokemon, Level, Moves),
 
+    allEvolutions(Pokemon, AllEvolutions)
+    pokemonEvolutions(Pokemon, Level, AllEvolutions, Evolutions),
+
+    retractall(owned(_, _, _, _, _, _, _, _, _))),
     asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)).
+
+    retractall(ownedEvolutions(_, _)),
+    asserta(ownedEvolutions(Tag, Evolutions)).
 
 % heal pokemon
 healPokemon(Tag):-
@@ -282,8 +314,11 @@ encounter(Route, T):-
     scaledHP(BaseHP, Level, HP),
     learnMoves(Pokemon, Level, Moves),
 
+    % change pokemon to its evolved form (if it applies)
+    currentEvolution(Pokemon, Level, Result),
+
     retractall(enemy(_, _, _, _, _, _)),
-    asserta(enemy(Pokemon, Level, Atk, HP, HP, Moves)).
+    asserta(enemy(Result, Level, Atk, HP, HP, Moves)).
 
 encounter(Route, T):-
     T == 1,
