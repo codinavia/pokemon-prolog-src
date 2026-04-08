@@ -14,11 +14,6 @@
 % add option to add pokemon to team
 
 % ==== HELPERS ====
-% get connected cities to current city
-connectedCities(Cities) :-
-    location(City, _),
-    findall(B, (city(B), connected(City, B)), Cities).
-
 % get a list of pairs and return only values
 pairs_values([], []).
 
@@ -171,7 +166,7 @@ choosePokemon(Tag):-
     asserta(activePokemon(Tag)),
 
     % save starting hp
-    owned(Tag, _, _, _, CurrentHP, _, _, _),
+    owned(Tag, _, _, _, _, CurrentHP, _, _, _),
     retract(startingHP(_)),
     asserta(startingHP(CurrentHP)).
 
@@ -207,7 +202,7 @@ hatchEgg(Tag):-
     scaledHP(BaseHP, Level, HP),
     pokemonMoves(Pokemon, Level, Moves),
     retract(playerEggs(Tag, _, _)),
-    asserta(owned(Tag, Pokemon, Level, Atk, HP, HP, 0, Moves)).
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)).
 
 % catch pokemon 
 attemptCatch(Pokemon, Pokeball):-
@@ -295,7 +290,7 @@ levelUp():-
 % check if active pokemon wants to evolve 
 checkEvolution(Pokemon):-
     activePokemon(Tag),
-    owned(Tag, Pokemon, _, Level, _, _, _, _, _)),
+    owned(Tag, Pokemon, _, Level, _, _, _, _, _),
     evolves(Pokemon, E, EvoLevel),
     ownedEvolutions(Tag, Evolutions),
     member(E-locked, Evolutions),
@@ -304,7 +299,7 @@ checkEvolution(Pokemon):-
 % mark evolution as evolved or rejected
 resolveEvolution(Choice):-
     activePokemon(Tag),
-    owned(Tag, Pokemon, _, _, _, _, _, _, _)),
+    owned(Tag, Pokemon, _, _, _, _, _, _, _),
     evolves(Pokemon, E, _),
     ownedEvolutions(Tag, Evolutions),
     updateEvolutions(E, Choice, Evolutions, New),
@@ -324,9 +319,9 @@ updateEvolutions(Evolution, NewState, [E-S | T], [E-S | R]):- E \= Evolution, up
 % trainer
 % egg appears % TODO
 % pokeball appears % TODO
-generateEvent(Type):- random_member([pokemon, trainer, egg, pokeball]).
+generateEvent(Type):- random_member([pokemon, trainer, egg, pokeball], Type).
 
-event(Type).
+% event(Type).
 
 enterBattle(Type) :-
     inRoute(Route, _),
@@ -498,7 +493,7 @@ checkWinner(Round):-
 
     % check hp lost for opponent
     enemy(_, _, _, EnemyCurrent, EnemyMax, _),
-    calculate(EnemyCurrent, EnemyMax, EnemyMax),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax, EnemyLost),
 
     % check hp lost for player
     activePokemon(Tag),
@@ -515,7 +510,7 @@ checkWinner(Round):-
 
     % check hp lost for opponent
     enemy(_, _, _, EnemyCurrent, EnemyMax, _),
-    calculate(EnemyCurrent, EnemyMax, EnemyMax),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax, EnemyLost),
 
     % check hp lost for player
     activePokemon(Tag),
@@ -532,7 +527,7 @@ checkWinner(Round):-
 
     % check hp lost for opponent
     enemy(_, _, _, EnemyCurrent, EnemyMax, _),
-    calculate(EnemyCurrent, EnemyMax, EnemyMax),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax, EnemyLost),
 
     % check hp lost for player
     activePokemon(Tag),
@@ -593,7 +588,7 @@ gainedMoney(Gained):-
     backpack(CurrentMoney, Pokeballs, Team),
 
     Gained is (Money * 0.5),
-    NewMoney is CurrentMoney + Gainer,
+    NewMoney is CurrentMoney + Gained,
 
     retract(backpack(_, _, _)),
     asserta(backpack(NewMoney, Pokeballs, Team)).
@@ -603,7 +598,7 @@ gainedMoney(Gained):-
     backpack(Money, Pokeballs, Team),
     
     Gained is -(Money * 0.1),
-    NewMoney is CurrentMoney + Gained,
+    NewMoney is Money + Gained,
     retract(backpack(_, _, _)),
     asserta(backpack(NewMoney, Pokeballs, Team)).
 
