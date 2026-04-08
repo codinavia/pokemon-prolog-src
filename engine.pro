@@ -176,23 +176,27 @@ travel(City, Location) :-
     asserta(location(City, Location)).
 
 % update egg distance
-growEgg(Route, [Tag-Type | T]):-
-    Type == egg,
+growEgg(_, []).
+
+growEgg(Route, [Tag-egg | T]):-
     playerEggs(Tag, Pokemon, CurrentDistance),
     route(Route, _, _, RouteDistance, _),
     NewDistance is CurrentDistance - min(RouteDistance, CurrentDistance), 
+
     retract(playerEggs(Tag, Pokemon, _)),
     asserta(playerEggs(Tag, Pokemon, NewDistance)),
-    
     growEgg(Route, T).
+
+growEgg(Route, [_-_ | T]):- growEgg(Route, T).
 
 % check if any eggs are about to hatch
 checkEgg([], []).
-checkEgg([Tag-Type | T], [Tag | R]):-
-    Type == egg,
-    playerEggs(Tag, _, Distance),
-    Distance == 0,
+
+checkEgg([Tag-egg | T], [Tag | R]):-
+    playerEggs(Tag, _, 0),
     checkEgg(T, R).
+
+checkEgg([_-_ | T], R):- checkEgg(T, R).
 
 hatchEgg(Tag):-
     playerEggs(Tag, Pokemon, _),
@@ -201,6 +205,7 @@ hatchEgg(Tag):-
     scaledAttack(BaseAtk, Level, Atk),
     scaledHP(BaseHP, Level, HP),
     pokemonMoves(Pokemon, Level, Moves),
+    
     retract(playerEggs(Tag, _, _)),
     asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)).
 
@@ -319,9 +324,12 @@ updateEvolutions(Evolution, NewState, [E-S | T], [E-S | R]):- E \= Evolution, up
 % trainer
 % egg appears % TODO
 % pokeball appears % TODO
-generateEvent(Type):- random_member([pokemon, trainer, egg, pokeball], Type).
+event(Type):- random_member([pokemon, trainer, egg, pokeball], Type).
 
-% event(Type).
+% foundItem(+Type, -Object)
+foundItem(Type, Object):-
+    Type == egg,
+    randomPokemon(Object).
 
 enterBattle(Type) :-
     inRoute(Route, _),
