@@ -9,6 +9,8 @@
 % ==== TODOS ====
 % gym battles
 % finish encounter section
+% learn new moves
+% when catching a pokemon check if team is full
 
 % ==== HELPERS ====
 % get a list of pairs and return only values
