@@ -282,9 +282,28 @@ levelUp():-
     asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, 0, Moves)). 
 
 % check if active pokemon wants to evolve 
-checkEvolution:-
+checkEvolution(Pokemon):-
     activePokemon(Tag),
-    owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, 0, Moves)). 
+    owned(Tag, Pokemon, _, Level, _, _, _, _, _)),
+    evolves(Pokemon, E, EvoLevel),
+    ownedEvolutions(Tag, Evolutions),
+    member(E-locked, Evolutions),
+    Level >= EvoLevel.
+
+% mark evolution as evolved or rejected
+resolveEvolution(Choice):-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, _, _, _, _, _, _, _)),
+    evolves(Pokemon, E, _),
+    ownedEvolutions(Tag, Evolutions),
+    updateEvolutions(E, Choice, Evolutions, New),
+
+    retract(ownedEvolutions(Tag, _)),
+    asserta(ownedEvolutions(Tag, New)).
+
+updateEvolutions(_, _, [], []).
+updateEvolutions(E, NewState, [E-_ | T], [E-NewState | R]):- updateEvolutions(E, NewState, T, R).
+updateEvolutions(Evolution, NewState, [E-S | T], [E-S | R]):- E \= Evolution, updateEvolutions(Evolution, NewState, T, R).
 
 % ==== RANDOM ENCOUNTER ====
 % enemy(pokemon, level, atk, current-hp, max-hp, moves)
@@ -570,12 +589,10 @@ gainedMoney(Gained):-
 
 gainedMoney(Gained):-
     winner(enemy, trainer),
-
     backpack(Money, Pokeballs, Team),
-
+    
     Gained is -(Money * 0.1),
     NewMoney is CurrentMoney + Gained,
-
     retract(backpack(_, _, _)),
     asserta(backpack(NewMoney, Pokeballs, Team)).
 
