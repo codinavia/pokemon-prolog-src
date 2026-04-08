@@ -6,6 +6,10 @@
 :- consult('data/pokemon.pro').
 :- consult('data/trainers.pro').
 
+% ==== TODOS ====
+% gym battles
+% finish encounter section
+
 % ==== HELPERS ====
 % get a list of pairs and return only values
 pairs_values([], []).
