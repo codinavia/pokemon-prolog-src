@@ -157,7 +157,12 @@ selectCity(CityB):-
 % choose active pokemon for fights
 choosePokemon(Tag):-
     retract(activePokemon(_)),
-    asserta(activePokemon(Tag)).
+    asserta(activePokemon(Tag)),
+
+    % save starting hp
+    owned(Tag, _, _, _, CurrentHP, _, _, _),
+    retract(startingHP(_)),
+    asserta(startingHP(CurrentHP)).
 
 % change player's location
 travel(City, Location) :-
@@ -276,42 +281,44 @@ levelUp():-
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, 0, Moves)). 
 
-% check if any pokemon wants to evolve 
-% checkEvolution([T | E], [Tag | R]):-
+% check if active pokemon wants to evolve 
+checkEvolution:-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, 0, Moves)). 
 
 % ==== RANDOM ENCOUNTER ====
 % enemy(pokemon, level, atk, current-hp, max-hp, moves)
 
 % events
-% 0 -> wild pokemon
-% 1 -> trainer
-% 2 -> egg appears % TODO
-% 3 -> pokeball appears % TODO
-event(Type):- random_between(0, 3, Type).
+% wild pokemon
+% trainer
+% egg appears % TODO
+% pokeball appears % TODO
+generateEvent(Type):- random_member([pokemon, trainer, egg, pokeball]).
 
 enterBattle(Type):-
+    % check if trainer in route has been defeated
     inRoute(Route, _),
+    trainer(Route, _, _, _, no),
 
+    % enter battle
     retract(inBattle(_)),
     asserta(inBattle(yes)),
-    
-    % check if trainer in route has been defeated
-    trainer(Route, _, _, _, no),
     encounter(Route, Type).
 
-enterBattle(Type):-
+enterBattle(Type):-   
+    % if trainer in route has been defeated, send encounter with wild pokemon
     inRoute(Route, _),
-
+    trainer(Route, _, _, _, yes),
+    
+    % enter battle
     retract(inBattle(_)),
     asserta(inBattle(yes)),
-    
-    % if trainer in route has been defeated, send encounter with wild pokemon
-    trainer(Route, _, _, _, yes),
-    encounter(Route, 0).
+    encounter(Route, pokemon).
 
 % generate random encounter of given type
 encounter(Route, Type):-
-    Type == 0,
+    Type == pokemon,
     % get encounter difficulty
     route(Route, _, _, _, Difficulty),
     difficulty(Difficulty, L, U),
@@ -336,7 +343,7 @@ encounter(Route, Type):-
     asserta(enemy(Result, Level, Atk, HP, HP, Moves)).
 
 encounter(Route, Type):-
-    Type == 1,
+    Type == trainer,
     route(Route, _, _, _, Difficulty),
     difficulty(Difficulty, L, U),
     random_between(L, U, Level),
@@ -363,7 +370,7 @@ encounter(Route, Type):-
 
 % ==== BATTLE LOGIC ====
 % hitWith(none).
-
+% startingHP(none). 
 hitEnemy:-
     enemy(Pokemon, Level, EnemyAtk, CurrentHP, MaxHP, Moves),
     
@@ -450,19 +457,24 @@ fainted(player) :-
     owned(Tag, _, _, _, _, HP, _, _, _),
     HP == 0.
 
-% winner(player | enemy, pokemon/0 | trainer/1)
+% winner(player | enemy, pokemon | trainer)
 % winner(none, none).
+calculate(CurrentHP, StartingHP, MaxHP, Porcentage):- 
+    Lost is StartingHP - CurrentHP,
+    Porcentage is Lost / MaxHP * 100.
+
 checkWinner(Round):-
     Round == 4,
 
     % check hp lost for opponent
     enemy(_, _, _, EnemyCurrent, EnemyMax, _),
-    EnemyLost is (100 - (EnemyCurrent / EnemyMax * 100)),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax),
 
     % check hp lost for player
     activePokemon(Tag),
+    startingHP(PlayerStarting),
     owned(Tag, _, _, _, _, PlayerCurrent, PlayerMax, _, _),
-    PlayerLost is (100 - (PlayerCurrent / PlayerMax * 100)),
+    calculate(PlayerCurrent, PlayerStarting, PlayerMax, PlayerLost),
 
     PlayerLost > EnemyLost,
     retract(winner(_, Type)),
@@ -473,12 +485,13 @@ checkWinner(Round):-
 
     % check hp lost for opponent
     enemy(_, _, _, EnemyCurrent, EnemyMax, _),
-    EnemyLost is (100 - (EnemyCurrent / EnemyMax * 100)),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax),
 
     % check hp lost for player
     activePokemon(Tag),
+    startingHP(PlayerStarting),
     owned(Tag, _, _, _, _, PlayerCurrent, PlayerMax, _, _),
-    PlayerLost is (100 - (PlayerCurrent / PlayerMax * 100)),
+    calculate(PlayerCurrent, PlayerStarting, PlayerMax, PlayerLost),
 
     PlayerLost < EnemyLost,
     retract(winner(_, Type)),
@@ -489,16 +502,17 @@ checkWinner(Round):-
 
     % check hp lost for opponent
     enemy(_, _, _, EnemyCurrent, EnemyMax, _),
-    EnemyLost is (100 - (EnemyCurrent / EnemyMax * 100)),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax),
 
     % check hp lost for player
     activePokemon(Tag),
+    startingHP(PlayerStarting),
     owned(Tag, _, _, _, _, PlayerCurrent, PlayerMax, _, _),
-    PlayerLost is (100 - (PlayerCurrent / PlayerMax * 100)),
+    calculate(PlayerCurrent, PlayerStarting, PlayerMax, PlayerLost),
 
     PlayerLost == EnemyLost,
     retract(winner(_, Type)),
-    asserta(winner(none, Type)).
+    asserta(winner(draw, Type)).
 
 checkWinner(_):-
     fainted(player),
@@ -512,90 +526,92 @@ checkWinner(_):-
     retract(winner(_, Type)),
     asserta(winner(player, Type)).
 
-updateStats:-
+% change pokemon to new state depending on its current hp
+updateState:-
     activePokemon(Tag),
     owned(Tag, Pokemon, _, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
-    enemy(_, EnemyLevel, _, _, _, _),
     pokemonHealth(CurrentHP, MaxHP, NewState),
 
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, Exp, Moves)).
+
+% gained experience depending on enemy level
+gainedExp(Exp):-
+    winner(player, _),
+    enemy(_, EnemyLevel, _, _, _, _),
     NewExp is Exp + EnemyLevel * 15,
 
-    retract(owned(Tag, _, _, _, _, _, _, _, _)),
-    asserta(owned(Tag, Pokemon, NewState, Level, Atk, CurrentHP, MaxHP, NewExp, Moves)).
+    retract(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, NewExp, Moves)),
+    asserta(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, NewExp, Moves)).
 
-finishBattle:-
-    % update based on winner
-    winner(player, 1),
+gainedExp(Exp):-
+    winner(draw, _),
+    enemy(_, EnemyLevel, _, _, _, _),
+    NewExp is Exp + EnemyLevel * 15 / 2,
 
-    updateStats,
-    % retract(enemy(_, _, _, _, _, _)),
+    retract(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, NewExp, Moves)),
+    asserta(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, NewExp, Moves)).
 
+gainedExp(0).
+
+% gained money
+gainedMoney(Gained):-
+    winner(player, trainer),
+
+    inRoute(Route, _),
+    trainer(Route, _, Money, _, _),
+    backpack(CurrentMoney, Pokeballs, Team),
+
+    Gained is (Money * 0.5),
+    NewMoney is CurrentMoney + Gainer,
+
+    retract(backpack(_, _, _)),
+    asserta(backpack(NewMoney, Pokeballs, Team)).
+
+gainedMoney(Gained):-
+    winner(enemy, trainer),
+
+    backpack(Money, Pokeballs, Team),
+
+    Gained is -(Money * 0.1),
+    NewMoney is CurrentMoney + Gained,
+
+    retract(backpack(_, _, _)),
+    asserta(backpack(NewMoney, Pokeballs, Team)).
+
+gainedMoney(0).
+
+% exit battle
+allowTravel:-
     inRoute(_, CityA),
-    travel(CityA, square),
+    travel(CityA, plaza),
+    retract(inRoute(_, _)),
+    asserta(inRoute(none, none)).
 
-    trainer(Route, Trainer, Money, Pokemon, _),
-    backpack(CurrentMoney, Pokeballs, Team),
-    
-    NewMoney is CurrentMoney + (Money * 0.5),
-
-    retract(trainer(Route, _, _, _, _)),
-    asserta(trainer(Route, Trainer, Money, Pokemon, yes)),
-
-    retract(backpack(_, _, _)),
-    asserta(backpack(NewMoney, Pokeballs, Team)),
-    
-    % change state from fighting to idle
+exitBattle:-
     retract(inBattle(_)),
     asserta(inBattle(no)),
-
     retract(idle(_)),
-    assert(idle(city)).
+    asserta(idle(city)).
 
-finishBattle:-
-    % update based on winner
-    winner(enemy, 1),
-    
-    updateStats,
-    % retract(enemy(_, _, _, _, _, _)),
+endBattle:-
+    winner(player, _),
+    updateState,
+    allowTravel,
+    exitBattle.
 
-    backpack(CurrentMoney, Pokeballs, Team),
-
-    NewMoney is CurrentMoney - (CurrentMoney / 10),
-
-    retract(backpack(_, _, _)),
-    asserta(backpack(NewMoney, Pokeballs, Team)),
-    
-    % change state from fighting to idle
-    retract(inBattle(_)),
-    asserta(inBattle(no)),
-    
-    retract(idle(_)),
-    assert(idle(city)).
-
-finishBattle:-
-    % will not update state on this one
-    % update based on winner (tie or flee)
+endBattle:-
     winner(none, _),
+    allowTravel,
+    exitBattle.
 
-    inRoute(_,CityA),
-    travel(CityA, square),
+endBattle:-
+    winner(enemy, pokemon),
+    updateState,
+    allowTravel,
+    exitBattle.
 
-    retract(inBattle(_)),
-    assert(inBattle(no)),
-
-    retract(idle(_)),
-    assert(idle(city)).
-
-finishBattle:-
-    winner(_, pokemon),
-    updateStats,
-
-    inRoute(_,CityA),
-    travel(CityA, square),
-
-    retract(inBattle(_)),
-    assert(inBattle(no)),
-
-    retract(idle(_)),
-    assert(idle(city)).
-    % retract(enemy(_, _, _, _, _, _)).
+endBattle:-
+    winner(enemy, trainer),
+    updateState,
+    exitBattle.
