@@ -11,6 +11,7 @@
 % finish encounter section
 % learn new moves
 % when catching a pokemon check if team is full
+% add option to add pokemon to team
 
 % ==== HELPERS ====
 % get a list of pairs and return only values
@@ -144,7 +145,6 @@ pokemonHealth(0, _, fainted).
 % ==== PLAYER ====
 % backpack(money, [pokeballs], [team])
 % owned(tag, pokemon, state, level, atk, current-hp, max-hp, exp, moves)
-% backpack(money, [pokeballs], [team])
 % owned(tag, pokemon, state, level, atk, current-hp, max-hp, exp, moves)
 % inBattle(yes | no).
 % inRoute(route, city).
