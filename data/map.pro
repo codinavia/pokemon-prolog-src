@@ -25,6 +25,23 @@ route(123,      evergrande,       sootopolis,         3200,         yellow).
 route(124,      evergrande,       mossdeep,           5100,         lilac).
 route(125,      sootopolis,       mossdeep,           3400,         yellow).
 
+city(littleroot).
+city(oldale).
+city(petalburg).
+city(dewford).
+city(slateport).
+city(rustboro).
+city(verdanturf).
+city(lavaridge).
+city(fallarbor).
+city(mauville).
+city(fortree).
+city(pacifidlog).
+city(lilycove).
+city(sootopolis).
+city(mossdeep).
+city(evergrande).
+
 % difficulty(color,    lower,       upper)
 difficulty(blue,       2,           4).
 difficulty(red,        4,           7).

@@ -14,6 +14,11 @@
 % add option to add pokemon to team
 
 % ==== HELPERS ====
+% get connected cities to current city
+connectedCities(Cities) :-
+    location(City, _),
+    findall(B, (city(B), connected(City, B)), Cities).
+
 % get a list of pairs and return only values
 pairs_values([], []).
 
@@ -321,25 +326,25 @@ updateEvolutions(Evolution, NewState, [E-S | T], [E-S | R]):- E \= Evolution, up
 % pokeball appears % TODO
 generateEvent(Type):- random_member([pokemon, trainer, egg, pokeball]).
 
-enterBattle(Type):-
-    % check if trainer in route has been defeated
-    inRoute(Route, _),
-    trainer(Route, _, _, _, no),
+event(Type).
 
-    % enter battle
-    retract(inBattle(_)),
-    asserta(inBattle(yes)),
-    encounter(Route, Type).
-
-enterBattle(Type):-   
-    % if trainer in route has been defeated, send encounter with wild pokemon
+enterBattle(Type) :-
     inRoute(Route, _),
-    trainer(Route, _, _, _, yes),
+    determineEncounter(Route, Type, FinalType),
     
-    % enter battle
+    % change state
     retract(inBattle(_)),
     asserta(inBattle(yes)),
-    encounter(Route, pokemon).
+    
+    encounter(Route, FinalType).
+
+determineEncounter(Route, trainer, trainer) :-
+    trainer(Route, _, _, _, no), !.
+
+determineEncounter(Route, trainer, pokemon) :-
+    trainer(Route, _, _, _, yes), !.
+
+determineEncounter(_, pokemon, pokemon).
 
 % generate random encounter of given type
 encounter(Route, Type):-
