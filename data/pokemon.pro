@@ -135,29 +135,29 @@ baseStats(mimikyu,      4,          20).
 
 % move(move, type, attack power, level)
 % ===== NORMAL =====
-move('Placaje',          normal, 1,  1).
-move('Ataque Rápido',    normal, 1,  4).
-move('Imagen',           normal, 1,  8).
-move('Rapidez',          normal, 2,  12).
-move('Golpe Cabeza',     normal, 2,  16).
-move('Cuchillada',       normal, 2,  20).
-move('Golpe Cuerpo',     normal, 1,  24).
-move('Vozarrón',         normal, 3,  28).
-move('Derribo',          normal, 3,  30).
+move('Placaje',          normal,  1,  1).
+move('Ataque Rápido',    normal,  1,  4).
+move('Imagen',           normal,  1,  8).
+move('Rapidez',          normal,  2,  12).
+move('Golpe Cabeza',     normal,  2,  16).
+move('Cuchillada',       normal,  2,  20).
+move('Golpe Cuerpo',     normal,  1,  24).
+move('Vozarrón',         normal,  3,  28).
+move('Derribo',          normal,  3,  30).
 
 % ===== FUEGO =====
-move('Ascuas',           fire,   1,  6).
-move('Colmillo Ígneo',   fire,   2,  12).
-move('Rueda Fuego',      fire,   2,  18).
-move('Giro Fuego',       fire,   1,  24).
-move('Envite Ígneo',     fire,   3,  30).
+move('Ascuas',           fire,    1,  6).
+move('Colmillo Ígneo',   fire,    2,  12).
+move('Rueda Fuego',      fire,    2,  18).
+move('Giro Fuego',       fire,    1,  24).
+move('Envite Ígneo',     fire,    3,  30).
 
 % ===== AGUA =====
-move('Pistola Agua',     water,  1,  6).
-move('Burbuja',          water,  2,  12).
-move('Rayo Burbuja',     water,  1,  18).
-move('Acua Jet',         water,  1,  24).
-move('Hidroariete',      water,  2,  30).
+move('Pistola Agua',     water,   1,  6).
+move('Burbuja',          water,   2,  12).
+move('Rayo Burbuja',     water,   1,  18).
+move('Acua Jet',         water,   1,  24).
+move('Hidroariete',      water,   2,  30).
 
 % ===== PLANTA =====
 move('Látigo Cepa',       grass,  1,  6).

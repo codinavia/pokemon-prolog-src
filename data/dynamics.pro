@@ -1,7 +1,7 @@
 % ==== POKEMON ====
 :- dynamic nextTag/1.
 :- dynamic owned/9.
-:- dynamic enemy/6.
+:- dynamic enemy/7.
 :- dynamic ownedEvolutions/2.
 
 % ==== TRAINERS ====
@@ -15,6 +15,7 @@
 :- dynamic playerEggs/3.
 :- dynamic inRoute/2.
 :- dynamic inBattle/1.
+:- dynamic computer/1.
 
 % ==== BATTLE ====
 :- dynamic winner/2.
@@ -33,6 +34,7 @@ init_game:-
     retractall(owned(_, _, _, _, _, _, _, _, _)), asserta(owned(none, none, none, none, none, none, none, none, none)),
     retractall(enemy(_, _, _, _, _, _)), asserta(enemy(none, none, none, none, none, none)), 
     retractall(ownedEvolutions(_, _)), asserta(ownedEvolutions(none, [])),
+    retractall(computer(_)), asserta(computer([])),
 
     retractall(winner(_, _)), asserta(winner(none, none)),
     retractall(hitWith(_)), asserta(hitWith(none)),
