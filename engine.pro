@@ -14,7 +14,6 @@
 % ==== TODOS ====
 % gym battles
 % learn new moves
-% add option to add pokemon to team
 
 % ==== HELPERS ====
 %!  addPair(+Key, +Value, +Pairs, -New)
@@ -49,7 +48,8 @@ generateTag(Tag):-
     Next is Tag + 1,
     asserta(nextTag(Next)).
 
-% mark moves as learned or forgotten in a given list
+%!  learnMoves(+Learned, +Moves, -Updated)
+%   update moves as learned or forgotten
 learnMoves(_, [], []).
 
 learnMoves(Learned, [M-locked | T], [M-learned | R]):-
@@ -73,25 +73,18 @@ getLearned([], []).
 getLearned([M-learned | T], [M | R]):- getLearned(T, R).
 getLearned([_-_ | T], R):- getLearned(T, R).
 
-% show player learned moves only
-showLearned(Tag, Learned):- owned(Tag, _, _, _, _, _, _, _, Moves), getLearned(Moves, Learned).
-
-% given (base) pokemon level get its current evolution
-currentEvolution(Pokemon, Level, Result) :-
-    evolves(Pokemon, Evolution, Required),
-    Level >= Required,
-    currentEvolution(Evolution, Level, Result).
-
-currentEvolution(Pokemon, _, Pokemon).
-
 % ==== POKEMON ====
+%!  nextLevel(+Level, -RequiredExp)
+%   calculates required experience for next level
 nextLevel(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
 
-% learns move at level ?
+%!  learnsAt(+Type, ?Move, -Level)
+%   returns when will a move be learned based on given type
 learnsAt(Type, Move, Level):- move(Move, Type, _, Level).
 learnsAt(_, Move, Level):- move(Move, normal, _, Level).
 
-% all moves for a pokemon given type
+%!  allMoves(+Type, -Moves)
+%   all available moves for a pokemon
 allMoves(Type, Moves):- findall(M-locked, (move(M, Type, _, _) ; move(M, normal, _, _)), U), sort(U, Moves).
 
 %!  pokemonMoves(+Pokemon, +Level, -Moves)
@@ -106,14 +99,19 @@ pokemonMoves(Pokemon, Level, Moves):-
     pairs_values(T, M),
     learnMoves(M, AllMoves, Moves).
 
-% base form given an evolved pokemon (or not)
-baseForm(Pokemon, Base) :-
-    \+ evolves(_, Pokemon, _),
-    Base = Pokemon.
+%!  showLearned(+Tag, -Learned)
+%   shows learned moves only
+showLearned(Tag, Learned):- owned(Tag, _, _, _, _, _, _, _, Moves), getLearned(Moves, Learned).
 
-baseForm(Pokemon, Base) :-
-    evolves(Pre, Pokemon, _),
-    baseForm(Pre, Base).
+%!  currentEvolution(+Pokemon, +Level, -Result)
+%   returns current stage of evolution of given pokemon
+currentEvolution(Pokemon, Level, Result) :- evolves(Pokemon, Evolution, Required), Level >= Required, currentEvolution(Evolution, Level, Result).
+currentEvolution(Pokemon, _, Pokemon).
+
+%!  baseForm(+Pokemon, -Base)
+%   returns base form of a given pokemon
+baseForm(Pokemon, Base) :- \+ evolves(_, Pokemon, _), Base = Pokemon.
+baseForm(Pokemon, Base) :- evolves(Pre, Pokemon, _), baseForm(Pre, Base).
 
 %!  allEvolutions(+Pokemon, -Evolutions) 
 %   all evolutions for a pokemon
@@ -130,8 +128,12 @@ evolved(_, _, [], []).
 evolved(Pokemon, Level, [E-locked | T], [E-evolved | R]):- evolves(Pokemon, E, L), L =< Level, evolved(E, Level, T, R).
 evolved(_, Level, [E-S | T], [E-S | R]):- evolved(E, Level, T, R).
 
-% get scaled stats
+%   scaledAttack(+BaseAtk, +Level, -Atk)
+%   returns attack based on level
 scaledAttack(BaseAtk, Level, Attack) :- Attack is BaseAtk + (Level * 2).
+
+%   scaledHP(+BaseHP, +Level, -Atk)
+%   returns max hp based on level
 scaledHP(BaseHP, Level, MaxHP) :- MaxHP is BaseHP + (Level * 3).
 
 %! pokemonHealth(+CurrentHP, +MaxHP, -State)
@@ -158,6 +160,23 @@ addToTeam(Tag, Type):-
     retract(backpack(_, _, _)),
     asserta(backpack(A, B, NewTeam)).
 
+%!  removeFromTeam(+Tag)
+%   new list with given pokemon or egg removed
+removeFromTeam(Tag):-
+    owned(Tag, Pokemon, _, _, _, _, _, _, _),
+    backpack(A, B, Team),
+    select(Tag-Pokemon, Team, NewTeam),
+
+    retract(backpack(_, _, _)),
+    asserta(backpack(A, B, NewTeam)).
+
+removeFromTeam(Tag):-
+    backpack(A, B, Team),
+    select(Tag-egg, Team, NewTeam),
+
+    retract(backpack(_, _, _)),
+    asserta(backpack(A, B, NewTeam)).
+
 %!  sendToComputer(+Tag, +Type)
 sendToComputer(Tag, Type):-
     computer(All),
@@ -166,17 +185,17 @@ sendToComputer(Tag, Type):-
     retract(computer(_)),
     asserta(computer(New)).
 
-% select a city in map to travel
+%!  selectCity(+City)
+%   sets inRoute(-Route) based on city selected
 selectCity(CityB):-
     location(CityA, _),
-
-    connected(CityA, CityB), % allow travel if they are connected, you can comment this if you're gonna check it separetly
     getRoute(CityA, CityB, Route),
 
     retract(inRoute(_, _)),
     asserta(inRoute(Route, CityB)).
 
-% choose active pokemon for a
+%!  choosePokemon(+Tag)
+%   choose active pokemon for fights
 choosePokemon(Tag):-
     retract(activePokemon(_)),
     asserta(activePokemon(Tag)),
@@ -186,12 +205,14 @@ choosePokemon(Tag):-
     retract(startingHP(_)),
     asserta(startingHP(CurrentHP)).
 
-% change player's location
+%!  travel(+City, +Location)
+%   change player's location
 travel(City, Location) :-
     retractall(location(_, _)),
     asserta(location(City, Location)).
 
-% update egg distance
+%!  growEgg(+Route, +List)
+%   updates all eggs in list based on distance of given rute
 growEgg(_, []).
 
 growEgg(Route, [Tag-egg | T]):-
@@ -205,28 +226,24 @@ growEgg(Route, [Tag-egg | T]):-
 
 growEgg(Route, [_-_ | T]):- growEgg(Route, T).
 
-% check if any eggs are about to hatch
+%!  checkEgg(+List, -List)
+%   returns list with eggs ready to hatch
 checkEgg([], []).
-
-checkEgg([Tag-egg | T], [Tag | R]):-
-    playerEggs(Tag, _, 0),
-    checkEgg(T, R).
-
+checkEgg([Tag-egg | T], [Tag | R]):- playerEggs(Tag, _, 0), checkEgg(T, R).
 checkEgg([_-_ | T], R):- checkEgg(T, R).
 
+%! hatchEgg(+Tag)
+%  asserts as owned given egg
 hatchEgg(Tag):-
     playerEggs(Tag, Pokemon, _),
-    baseStats(Pokemon, BaseAtk, BaseHP),
     random_between(2, 4, Level),
-    scaledAttack(BaseAtk, Level, Atk),
-    scaledHP(BaseHP, Level, HP),
-    pokemonMoves(Pokemon, Level, Moves),
+    pokemonStats(Pokemon, Level, Atk, HP, Moves),
     
     retract(playerEggs(Tag, _, _)),
     asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)).
 
 %!  attemptCatch(+Pokeball, -SavedIn)
-%   if successfull will return if pokemon was saved in backpack or computer
+%   if successfull, will return if pokemon was saved in backpack or computer
 %   else, will return false
 attemptCatch(Pokeball, SavedIn):-
     usePokeball(Pokeball),
@@ -281,16 +298,31 @@ catchSuccess(Pokemon, State, Level, Atk, CurrentHP, MaxHP, Moves, computer):-
     asserta(owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves)),
     asserta(ownedEvolutions(Tag, Evolutions)).
 
-% pokeballs
-usePokeball(P):-
-    backpack(Money, Pokeballs, Team),
-    select(P, Pokeballs, New),
+%!  buyPokeball(+Pokeball)
+%   will return false if current money is less than required
+buyPokeball(Pokeball):-
+    pokeball(Pokeball, Cost),
+    backpack(Money, P, Team),
 
-    % update
+    Cost =< Money,
+    NewMoney is Money - Cost,
+
+    add(Pokeball, P, NewP),
+
+    retract(backpack(_, _, _)),
+    asserta(backpack(NewMoney, NewP, Team)).
+
+%!  usePokeball(+Pokeball)
+%   removes given pokeball from backpack
+usePokeball(Pokeball):-
+    backpack(Money, Pokeballs, Team),
+    select(Pokeball, Pokeballs, New),
+
     retract(backpack(_, _, _)),
     asserta(backpack(Money, New, Team)).
 
-% assert as owned the chosen starter pokemon
+%! chooseStarter(+Pokemon)
+%  assert as given pokemon as owned
 chooseStarter(Pokemon):-
     generateTag(Tag),
     addToTeam(Tag, Pokemon),
@@ -307,15 +339,17 @@ chooseStarter(Pokemon):-
     retractall(ownedEvolutions(_, _)),
     asserta(ownedEvolutions(Tag, Evolutions)).
 
-% heal pokemon
+%!  healPokemon(+Tag)
+%   changes given pokemon's hp to full
 healPokemon(Tag):-
     owned(Tag, Pokemon, _, Level, Atk, _, MaxHP, Exp, Moves),
 
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, healthy, Level, Atk, MaxHP, MaxHP, Exp, Moves)).
 
-% level up pokemon
-levelUp():-
+%!  levelUp
+%   levels up <active> pokemon, will return false if current experience is less than required
+levelUp:-
     activePokemon(Tag),
     owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
 
@@ -330,8 +364,9 @@ levelUp():-
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, 0, Moves)). 
 
-% check if active pokemon wants to evolve 
-checkEvolution(Pokemon):-
+%!  checkEvolution
+%   true if <active> pokemon wants to evolve, will return false if level is less than required or evolution has been rejected before
+checkEvolution:-
     activePokemon(Tag),
     owned(Tag, Pokemon, _, Level, _, _, _, _, _),
     evolves(Pokemon, E, EvoLevel),
@@ -339,23 +374,43 @@ checkEvolution(Pokemon):-
     member(E-locked, Evolutions),
     Level >= EvoLevel.
 
-% mark evolution as evolved or rejected
-resolveEvolution(Choice):-
+%!  resolveEvolution(+Choice)
+%   mark evolution as given choice, needs to be <evolved> or <rejected>
+resolveEvolution(evolved) :-
     activePokemon(Tag),
-    owned(Tag, Pokemon, _, _, _, _, _, _, _),
-    evolves(Pokemon, E, _),
+    owned(Tag, Pokemon, A, B, C, D, E, F, G),
+    evolves(Pokemon, Evo, _),
     ownedEvolutions(Tag, Evolutions),
-    updateEvolutions(E, Choice, Evolutions, New),
+    updateEvolutions(Evo, evolved, Evolutions, New),
+
+    retract(ownedEvolutions(Tag, _)),
+    asserta(ownedEvolutions(Tag, New)),
+    
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Evo, A, B, C, D, E, F, G)),
+    
+    removeFromTeam(Tag),
+    addToTeam(Tag, Evo).
+
+resolveEvolution(rejected) :-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, _, _, _, -, _, _, _),
+    evolves(Pokemon, Evo, _),
+    ownedEvolutions(Tag, Evolutions),
+    updateEvolutions(Evo, rejected, Evolutions, New),
 
     retract(ownedEvolutions(Tag, _)),
     asserta(ownedEvolutions(Tag, New)).
 
+%!  updateEvolutions(+Evolution, +NewState, +All, -New)
+%   marks given evolution as <evolved>
 updateEvolutions(_, _, [], []).
 updateEvolutions(E, NewState, [E-_ | T], [E-NewState | R]):- updateEvolutions(E, NewState, T, R).
 updateEvolutions(Evolution, NewState, [E-S | T], [E-S | R]):- E \= Evolution, updateEvolutions(Evolution, NewState, T, R).
 
 % ==== EVENTS ====
-%!  changes state to fighting
+%!  enterBattle
+%   changes state to fighting
 enterBattle:-
     retract(inBattle(_)),
     asserta(inBattle(yes)).
@@ -680,19 +735,24 @@ gainedMoney(Gained):-
 
 gainedMoney(0).
 
-% exit battle
+%!  allowTravel
+%   asserts player's new location
 allowTravel:-
     inRoute(_, CityA),
     travel(CityA, plaza),
     retract(inRoute(_, _)),
     asserta(inRoute(none, none)).
 
+%!  exitBattle
+%   changes state from fighting to idle
 exitBattle:-
     retract(inBattle(_)),
     asserta(inBattle(no)),
     retract(idle(_)),
     asserta(idle(city)).
 
+%!  endBattle
+%   allows travel and/or exits battle based on battle winner 
 endBattle:-
     winner(enemy, trainer),
     exitBattle.
