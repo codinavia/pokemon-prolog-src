@@ -78,7 +78,53 @@ getLearned([_-_ | T], R):- getLearned(T, R).
 %   calculates required experience for next level
 nextLevel(Level, RequiredExp):- RequiredExp is 50 + (20 * Level).
 
-%!  learnsAt(+Type, ?Move, -Level)
+%!  newMoves(-List)
+%   returns new moves for <active> pokemon, will return false if there isn't any    
+newMove(NewMoves):-
+    activePokemon(Tag),
+    owned(Tag, Pokemon, _, Level, _, _, _, _, Moves),
+    type(Pokemon, Type),
+    findall(M, (learnsAt(Type, M, L), L =< Level, member(M-locked, Moves)), All),
+    sort(All, NewMoves).
+
+%!  forgetMove(+Move)
+%   marks given move as forgotten for <active> pokemon
+forgetMove(Move):-
+    activePokemon(Tag),
+    owned(Tag, A, B, C, D, E, F, G, Moves),
+    updateMoves(Move, forgotten, Moves, New),
+    
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, A, B, C, D, E, F, G, New)).
+
+%!  resolveMove(+Move, +Choice)
+%   marks move as given choice (must be rejected or learned), will return false if choice = learned and pokemon knows four moves already
+resolveMove(Move, learned):-
+    activePokemon(Tag),
+    owned(Tag, A, B, C, D, E, F, G, Moves),
+    getLearned(Moves, Learned),
+    length(Learned, Length),
+    Length < 4,
+    updateMoves(Move, learned, Moves, New),
+    
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, A, B, C, D, E, F, G, New)).
+
+resolveMove(Move, rejected):-
+    activePokemon(Tag),
+    owned(Tag, A, B, C, D, E, F, G, Moves),
+    updateMoves(Move, rejected, Moves, New),
+    
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, A, B, C, D, E, F, G, New)).
+
+%!  updateMoves(+Move, +State, +All, -New)
+%   marks move as given state 
+updateMoves(_, _, [], []).
+updateMoves(M, State, [M-_ | T], [M-State | R]):- updateMoves(M, State, T, R).
+updateMoves(Move, State, [M-S | T], [M-S | R]):- M \= Move, updateMoves(Move, State, T, R).
+
+%!  learnsAt(+Type, ?Move, ?Level)
 %   returns when will a move be learned based on given type
 learnsAt(Type, Move, Level):- move(Move, Type, _, Level).
 learnsAt(_, Move, Level):- move(Move, normal, _, Level).
@@ -233,14 +279,17 @@ checkEgg([Tag-egg | T], [Tag | R]):- playerEggs(Tag, _, 0), checkEgg(T, R).
 checkEgg([_-_ | T], R):- checkEgg(T, R).
 
 %! hatchEgg(+Tag)
-%  asserts as owned given egg
+%  asserts given egg as owned
 hatchEgg(Tag):-
     playerEggs(Tag, Pokemon, _),
     random_between(2, 4, Level),
     pokemonStats(Pokemon, Level, Atk, HP, Moves),
     
     retract(playerEggs(Tag, _, _)),
-    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)).
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)), 
+    
+    removeFromTeam(Tag),
+    addToTeam(Tag, Pokemon).
 
 %!  attemptCatch(+Pokeball, -SavedIn)
 %   if successfull, will return if pokemon was saved in backpack or computer
@@ -403,7 +452,7 @@ resolveEvolution(rejected) :-
     asserta(ownedEvolutions(Tag, New)).
 
 %!  updateEvolutions(+Evolution, +NewState, +All, -New)
-%   marks given evolution as <evolved>
+%   marks given evolution as <evolved> or <rejected>
 updateEvolutions(_, _, [], []).
 updateEvolutions(E, NewState, [E-_ | T], [E-NewState | R]):- updateEvolutions(E, NewState, T, R).
 updateEvolutions(Evolution, NewState, [E-S | T], [E-S | R]):- E \= Evolution, updateEvolutions(Evolution, NewState, T, R).
