@@ -22,6 +22,7 @@
 :- dynamic hitWith/1.
 :- dynamic startingHP/1.
 :- dynamic queue/2.
+:- dynamic gymExp/1.
 
 init_game:-
     retractall(backpack(_, _, _)),                asserta(backpack(0, [], [], [])),
@@ -40,4 +41,5 @@ init_game:-
     retractall(winner(_, _)),                     asserta(winner(none, none)),
     retractall(hitWith(_)),                       asserta(hitWith(none)),
     retractall(startingHP(_)),                    asserta(startingHP(none)),
-    retractall(queue(_, _)),                      asserta(queue([], none)).
+    retractall(queue(_, _)),                      asserta(queue([], none)),
+    retractall(gymExp(_, _)),                     asserta(gymExp([])).

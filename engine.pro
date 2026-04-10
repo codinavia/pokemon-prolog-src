@@ -381,7 +381,6 @@ chooseStarter(Pokemon):-
     allEvolutions(Pokemon, AllEvolutions),
     evolved(Pokemon, Level, AllEvolutions, Evolutions),
 
-    retractall(owned(_, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)),
 
     retractall(ownedEvolutions(_, _)),
@@ -676,6 +675,26 @@ calculate(CurrentHP, StartingHP, MaxHP, Porcentage):- Lost is StartingHP - Curre
 %!  checkWinner(+Round)
 %   checks winner given round number
 checkWinner(8):-
+    winner(_, gym),
+
+    % check hp lost for opponent
+    enemy(_, _, _, _, EnemyCurrent, EnemyMax, _),
+    calculate(EnemyCurrent, EnemyMax, EnemyMax, EnemyLost),
+
+    % check hp lost for player
+    activePokemon(Tag),
+    startingHP(PlayerStarting),
+    owned(Tag, _, _, _, _, PlayerCurrent, PlayerMax, _, _),
+    calculate(PlayerCurrent, PlayerStarting, PlayerMax, PlayerLost),
+
+    PlayerLost > EnemyLost,
+    retract(winner(_, Type)),
+    asserta(winner(enemy, Type)),
+    
+    retract(owned(Tag, B, C, D, E, F, G, H, I)),
+    asserta(owned(Tag, B, fainted, D, E, 0, G, H, I)).
+
+checkWinner(8):-
     % check hp lost for opponent
     enemy(_, _, _, _, EnemyCurrent, EnemyMax, _),
     calculate(EnemyCurrent, EnemyMax, EnemyMax, EnemyLost),
@@ -782,6 +801,14 @@ gainedMoney(Gained):-
     retract(backpack(_, _, _, _)),
     asserta(backpack(NewMoney, Medals, Pokeballs, Team)).
 
+gainedMoney(300):-
+    winner(player, gym),
+    backpack(Money, Medals, Pokeballs, Team),
+
+    NewMoney is Money + 300,
+    retract(backpack(_, _, _, _)),
+    asserta(backpack(NewMoney, Medals, Pokeballs, Team)).
+
 gainedMoney(0).
 
 %!  allowTravel
@@ -823,27 +850,39 @@ endBattle:-
 endBattle:-
     winner(player, gym),
     queue([Next | Rest], Level),
+    saveExp,
 
     % reset winner but stay in battle
     retract(winner(_, _)),
     asserta(winner(none, gym)),
 
     retract(queue(_, _)),
-    asserta(queue(Rest, Level)).
+    asserta(queue(Rest, Level)),
     
     setEnemy(Next, Level).
 
 endBattle:-
-    winner(enemy, gym),
+    winner(player, gym),
+    queue([], _),
+    saveExp,
+    location(City, _),
+    gymnasium(City, Leader, _, _),
+    gymLeader(Leader, Level, Team, no),
+    retract(gymLeader(_, _, _, _)),
+    asserta(gymLeader(Leader, Level, Team, yes)),
+    exitBattle.
 
+endBattle:-
+    winner(enemy, gym),
+    backpack(_, _, _, Team),
+    isTeamNuked(Team),
+    exitBattle.
+
+endBattle:-
+    winner(_, gym),
+    % reset winner but stay in battle
     retract(winner(_, _)),
     asserta(winner(none, gym)).
-
-%!  IDK
-%   checks if player has pokemon with hp left
-a():-
-    
-
 
 % ==== GYMNASIUM BATTLES ====
 %!  challenge
@@ -864,3 +903,31 @@ challenge:-
 
     setEnemy(First, Level),
     enterBattle.
+
+%!  saveExp
+%   helper to save experience gained in gymnasium
+saveExp:-
+    gainedExp(Gained),
+    gymExp(Record),
+    add(Gained, Record, S),
+    retract(gymExp(_)),
+    retract(gymExp(S)).
+
+%!  gainBadge
+%   adds badge tp backpack
+gainBadge:-
+    location(City, _),
+    gymnasium(City, _, _, Badge),
+    backpack(A, Badges, B, C),
+    add(Badge, Badges, New),
+
+    retract(backpack(_, _, _, _)),
+    asserta(backpack(A, New, B, C)).
+
+
+%!  isTeamNuked(+Team)
+%   returns false if player has pokemon with hp left
+isTeamNuked([]).
+isTeamNuked([Tag-_ | R]) :-
+    owned(Tag, _, fainted, _, _, _, _, _, _),
+    isTeamNuked(R).
