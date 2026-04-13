@@ -11,13 +11,11 @@
 % backpack(money, [pokeballs], [team])
 % owned(tag, pokemon, state, level, atk, current-hp, max-hp, exp, moves)
 
-% ==== TODOS ====
-% gym battles
-
 % ==== HELPERS ====
 %!  addPair(+Key, +Value, +Pairs, -New)
 %   returns new list with element added
-addPair(K, V, Pairs, [K-V | Pairs]).
+addPair(K, V, [], [K-V]).
+addPair(K, V, [H | T], [H | R]):- addPair(K, V, T, R).
 
 %!  add(+Value, +List, -New)
 %   returns new list with element added
@@ -256,8 +254,8 @@ travel(City, Location) :-
     retractall(location(_, _)),
     asserta(location(City, Location)).
 
-%!  growEgg(+Route, +List)
-%   updates all eggs in list based on distance of given rute
+%!  growEgg(+Route, +Team)
+%   updates all eggs in team based on distance of given rute
 growEgg(_, []).
 
 growEgg(Route, [Tag-egg | T]):-
@@ -271,7 +269,7 @@ growEgg(Route, [Tag-egg | T]):-
 
 growEgg(Route, [_-_ | T]):- growEgg(Route, T).
 
-%!  checkEgg(+List, -List)
+%!  checkEgg(+Team, -List)
 %   returns list with eggs ready to hatch
 checkEgg([], []).
 checkEgg([Tag-egg | T], [Tag | R]):- playerEggs(Tag, _, 0), checkEgg(T, R).
@@ -363,11 +361,11 @@ buyPokeball(Pokeball):-
 %!  usePokeball(+Pokeball)
 %   removes given pokeball from backpack
 usePokeball(Pokeball):-
-    backpack(Money, Medals, Pokeballs, Team),
+    backpack(Money, Badges, Pokeballs, Team),
     select(Pokeball, Pokeballs, New),
 
     retract(backpack(_, _, _, _)),
-    asserta(backpack(Money, Medals, New, Team)).
+    asserta(backpack(Money, Badges, New, Team)).
 
 %! chooseStarter(+Pokemon)
 %  assert as given pokemon as owned
@@ -462,15 +460,25 @@ enterBattle:-
     retract(inBattle(_)),
     asserta(inBattle(yes)).
 
+
 %!  determineEncounter(+Route, +Type, -Final)
 %   if trainer in route has beed defeated, change encounter to wild pokemon
-determineEncounter(Route, trainer, trainer):- trainer(Route, _, _, _, no).
-determineEncounter(Route, trainer, pokemon):- trainer(Route, _, _, _, yes).
+% determineEncounter(Route, trainer, trainer):- trainer(Route, _, _, _, no).
+% determineEncounter(Route, trainer, pokemon):- trainer(Route, _, _, _, yes).
 
 %!  event(-Type)
 %   generates a random event
 event(Type):- 
+    inRoute(Route, _),
+    trainer(Route, _, _, _, no),
     Events = [pokemon-35, trainer-35, egg-15, pokeball-15],
+    random_between(1, 100, Roll),
+    pickEvent(Roll, Events, 0, Type).
+
+event(Type):- 
+    inRoute(Route, _),
+    trainer(Route, _, _, _, yes),
+    Events = [pokemon-70, egg-15, pokeball-15],
     random_between(1, 100, Roll),
     pickEvent(Roll, Events, 0, Type).
 
@@ -491,8 +499,8 @@ handleEvent(pokemon, _):-
 
 handleEvent(trainer, _):-
     inRoute(Route, _),
-    determineEncounter(Route, trainer, Final),
-    encounter(Route, Final),
+    % determineEncounter(Route, trainer, Final),
+    encounter(Route, trainer),
     enterBattle.
 
 %!  handleEvent(+Type, -Item)
@@ -508,13 +516,15 @@ pickUpItem(egg, Item, backpack):-
     Length < 4,
 
     generateTag(Tag),
-    asserta(playerEggs(Tag, Item)),
+    egg(Item, Distance),
+    asserta(playerEggs(Tag, Item, Distance)),
     addToTeam(Tag, egg).
 
 pickUpItem(egg, Item, computer):-
     generateTag(Tag),
+    egg(Item, Distance),
     sendToComputer(Tag, egg),
-    asserta(playerEggs(Tag, Item)).
+    asserta(playerEggs(Tag, Item, Distance)).
 
 pickUpItem(pokeball, Item, backpack):-
     backpack(A, B, Pokeballs, C),
@@ -564,7 +574,7 @@ setEnemy(Pokemon, Level):-
     pokemonStats(Base, Level, Atk, HP, Moves),
     
     % assert enemy
-    retract(enemy(_, _, _, _, _, _)),
+    retract(enemy(_, _, _, _, _, _, _)),
     asserta(enemy(Pokemon, healthy, Level, Atk, HP, HP, Moves)).
 
 % ==== BATTLE LOGIC ====
@@ -599,7 +609,7 @@ hitEnemy:-
     
     % assert new hp
     NewHP is CurrentHP - min(Damage, CurrentHP),
-    pokemonHealth(CurrentHP, MaxHP, State),
+    pokemonHealth(NewHP, MaxHP, State),
 
     retract(enemy(_, _, _, _, _, _, _)),
     asserta(enemy(Pokemon, State, Level, EnemyAtk, NewHP, MaxHP, Moves)).
@@ -618,7 +628,7 @@ hitEnemy:-
     
     % assert new hp,
     NewHP is CurrentHP - min(Damage, CurrentHP),
-    pokemonHealth(CurrentHP, MaxHP, State),
+    pokemonHealth(NewHP, MaxHP, State),
 
     retract(enemy(_, _, _, _, _, _, _)),
     asserta(enemy(Pokemon, State, Level, EnemyAtk, NewHP, MaxHP, Moves)).
@@ -640,7 +650,7 @@ hitPlayer:-
     
     % assert new hp,
     NewHP is CurrentHP - min(Damage, CurrentHP),
-    pokemonHealth(CurrentHP, MaxHP, State),
+    pokemonHealth(NewHP, MaxHP, State),
 
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, State, Level, Atk, NewHP, MaxHP, Exp, Moves)).
@@ -659,7 +669,7 @@ hitPlayer:-
     
     % assert new hp,
     NewHP is CurrentHP - min(Damage, CurrentHP),
-    pokemonHealth(CurrentHP, MaxHP, State),
+    pokemonHealth(NewHP, MaxHP, State),
 
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, State, Level, Atk, NewHP, MaxHP, Exp, Moves)).
@@ -691,7 +701,7 @@ checkWinner(8):-
     retract(winner(_, Type)),
     asserta(winner(enemy, Type)),
     
-    retract(owned(Tag, B, C, D, E, F, G, H, I)),
+    retract(owned(Tag, B, _, D, E, _, G, H, I)),
     asserta(owned(Tag, B, fainted, D, E, 0, G, H, I)).
 
 checkWinner(8):-
@@ -784,30 +794,30 @@ gainedMoney(Gained):-
 
     inRoute(Route, _),
     trainer(Route, _, Money, _, _),
-    backpack(CurrentMoney, Medals, Pokeballs, Team),
+    backpack(CurrentMoney, Badges, Pokeballs, Team),
 
     Gained is (Money * 0.5),
     NewMoney is CurrentMoney + Gained,
 
     retract(backpack(_, _, _, _)),
-    asserta(backpack(NewMoney, Medals, Pokeballs, Team)).
+    asserta(backpack(NewMoney, Badges, Pokeballs, Team)).
 
 gainedMoney(Gained):-
     winner(enemy, trainer),
-    backpack(Money, Medals, Pokeballs, Team),
+    backpack(Money, Badges, Pokeballs, Team),
     
     Gained is -(Money * 0.1),
     NewMoney is Money + Gained,
     retract(backpack(_, _, _, _)),
-    asserta(backpack(NewMoney, Medals, Pokeballs, Team)).
+    asserta(backpack(NewMoney, Badges, Pokeballs, Team)).
 
 gainedMoney(300):-
     winner(player, gym),
-    backpack(Money, Medals, Pokeballs, Team),
+    backpack(Money, Badges, Pokeballs, Team),
 
     NewMoney is Money + 300,
     retract(backpack(_, _, _, _)),
-    asserta(backpack(NewMoney, Medals, Pokeballs, Team)).
+    asserta(backpack(NewMoney, Badges, Pokeballs, Team)).
 
 gainedMoney(0).
 
@@ -823,9 +833,7 @@ allowTravel:-
 %   changes state from fighting to idle
 exitBattle:-
     retract(inBattle(_)),
-    asserta(inBattle(no)),
-    retract(idle(_)),
-    asserta(idle(city)).
+    asserta(inBattle(no)).
 
 %!  endBattle
 %   allows travel and/or exits battle based on battle winner 
@@ -840,7 +848,7 @@ endBattle:-
     retract(trainer(R, T, M, P, _)),
     asserta(trainer(R, T, M, P, yes)),
     allowTravel,
-    endBattle.
+    exitBattle.
 
 endBattle:-
     winner(_, pokemon),
@@ -909,7 +917,8 @@ challenge:-
 saveExp:-
     gainedExp(Gained),
     gymExp(Record),
-    add(Gained, Record, S),
+    activePokemon(Tag),
+    addPair(Tag, Gained, Record, S),
     retract(gymExp(_)),
     retract(gymExp(S)).
 
@@ -924,10 +933,26 @@ gainBadge:-
     retract(backpack(_, _, _, _)),
     asserta(backpack(A, New, B, C)).
 
-
 %!  isTeamNuked(+Team)
 %   returns false if player has pokemon with hp left
 isTeamNuked([]).
 isTeamNuked([Tag-_ | R]) :-
     owned(Tag, _, fainted, _, _, _, _, _, _),
     isTeamNuked(R).
+
+% ==== GAME BEATEN ====
+%!  allBadges
+%   returns true if player has gained all badges
+allBadges:-
+    backpack(_, Badges, _, _),
+    findall(B, gymnasium(_, _, _, B), All),
+    msort(Badges, Sorted),
+    msort(All, Sorted).
+
+%!  caughtAll
+%   returns true if player has caught at least one pokemon for every type
+caughtAll:-
+    findall(T, (owned(_, P, _, _, _, _, _, _, _), type(P, T)), Owned),
+    findall(O, type(_, O), All),
+    sort(Owned, Sorted),
+    sort(All, Sorted).
