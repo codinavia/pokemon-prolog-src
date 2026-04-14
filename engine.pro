@@ -309,7 +309,7 @@ catchSuccess(Pokemon, State, Level, Atk, CurrentHP, MaxHP, Moves, backpack):-
     % check if there's space in team
     backpack(_, _, _, Team),
     length(Team, Length),
-    Length < 4,
+    Length < 6,
 
     generateTag(Tag),
     addToTeam(Tag, Pokemon),
@@ -392,23 +392,31 @@ healPokemon(Tag):-
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Pokemon, healthy, Level, Atk, MaxHP, MaxHP, Exp, Moves)).
 
-%!  levelUp
-%   levels up <active> pokemon, will return false if current experience is less than required
-levelUp:-
+%!  levelUp(+N, -Levels)
+%   returns how many levels pokemon leveled up
+levelUp(N, L):-
     activePokemon(Tag),
     owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
 
     nextLevel(Level, RequiredExp),
     Exp >= RequiredExp,
 
+    N1 is N + 1,
+
     % new stats
     NewLevel is Level + 1,
     NewAtk is Atk + 2,
     NewHP is MaxHP + 3,
 
-    retract(owned(Tag, _, _, _, _, _, _, _, _)),
-    asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, 0, Moves)). 
+    NewExp is Exp - RequiredExp, 
 
+    retract(owned(Tag, _, _, _, _, _, _, _, _)),
+    asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, NewExp, Moves)),
+    
+    levelUp(N1, L).
+
+levelUp(N, N).
+    
 %!  checkEvolution
 %   true if <active> pokemon wants to evolve, will return false if level is less than required or evolution has been rejected before
 checkEvolution:-
@@ -513,7 +521,7 @@ pickUpItem(egg, Item, backpack):-
     % check if there's space in team
     backpack(_, _, _, Team),
     length(Team, Length),
-    Length < 4,
+    Length < 6,
 
     generateTag(Tag),
     egg(Item, Distance),
@@ -920,11 +928,11 @@ saveExp:-
     activePokemon(Tag),
     addPair(Tag, Gained, Record, S),
     retract(gymExp(_)),
-    retract(gymExp(S)).
+    asserta(gymExp(S)).
 
 %!  gainBadge
 %   adds badge tp backpack
-gainBadge:-
+gainBadge(Badge):-
     location(City, _),
     gymnasium(City, _, _, Badge),
     backpack(A, Badges, B, C),
@@ -936,8 +944,10 @@ gainBadge:-
 %!  isTeamNuked(+Team)
 %   returns false if player has pokemon with hp left
 isTeamNuked([]).
-isTeamNuked([Tag-_ | R]) :-
+isTeamNuked([Tag-_ | R]):-
     owned(Tag, _, fainted, _, _, _, _, _, _),
+    isTeamNuked(R).
+isTeamNuked([_-egg | R]):-
     isTeamNuked(R).
 
 % ==== GAME BEATEN ====
