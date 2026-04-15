@@ -54,8 +54,8 @@ difficulty(lilac,      27,          30).
 difficulty(yellow,     31,          34).
 
 % gymnasium(city,       leader,     numberOfFights,  badge)
-gymnasium(rustboro,     roxxane,    1,               stone).
-gymnasium(mauville,     brawly,     2,               dynamo).
+gymnasium(rustboro,     roxanne,    1,               stone).
+gymnasium(mauville,     wattson,     2,               dynamo).
 gymnasium(lavaridge,    flannery,   3,               heat).
 gymnasium(lilycove,     winona,     4,               feather).
 gymnasium(mossdeep,     brawly,     5,               knuckle).

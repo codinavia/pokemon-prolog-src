@@ -49,7 +49,8 @@ type(gengar,        ghost).
 type(litwick,       ghost).
 type(lampent,       ghost).
 type(chandelure,    ghost).
-type(mimikyu,       ghost).
+type(shuppet,       ghost).
+type(banette,       ghost).
 
 % pokéballs
 pokeball(normal,    50).
@@ -90,9 +91,10 @@ evolves(gastly,        haunter,        17).
 evolves(haunter,       gengar,         24).
 evolves(litwick,       lampent,        17).
 evolves(lampent,       chandelure,     24).
+evolves(shuppet,       banette,        17).
 
 % egg(pokemon, required_distance)
-egg(mimikyu,    1000).
+egg(shuppet,    1000).
 egg(eevee,      2000).
 egg(pidgey,     2000).
 egg(jigglypuff, 2000).
@@ -131,7 +133,7 @@ baseStats(bulbasaur,    6,          24).
 % ===== GHOST =====
 baseStats(gastly,       5,          22).
 baseStats(litwick,      4,          19).
-baseStats(mimikyu,      4,          20).
+baseStats(shuppet,      4,          20).
 
 % move(move, type, attack power, level)
 % ===== NORMAL =====

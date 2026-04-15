@@ -374,12 +374,12 @@ chooseStarter(Pokemon):-
     addToTeam(Tag, Pokemon),
 
     % pokemon stats
-    Level = 5,
+    Level = 16,
     pokemonStats(Pokemon, Level, Atk, HP, Moves),
     allEvolutions(Pokemon, AllEvolutions),
     evolved(Pokemon, Level, AllEvolutions, Evolutions),
 
-    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)),
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 360, Moves)),
 
     retractall(ownedEvolutions(_, _)),
     asserta(ownedEvolutions(Tag, Evolutions)).
@@ -408,10 +408,11 @@ levelUp(N, L):-
     NewAtk is Atk + 2,
     NewHP is MaxHP + 3,
 
-    NewExp is Exp - RequiredExp, 
+    NewExp is Exp - RequiredExp,
+    NewCurrent is CurrentHP + 3,
 
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
-    asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, CurrentHP, NewHP, NewExp, Moves)),
+    asserta(owned(Tag, Pokemon, State, NewLevel, NewAtk, NewCurrent, NewHP, NewExp, Moves)),
     
     levelUp(N1, L).
 
@@ -439,15 +440,15 @@ resolveEvolution(evolved) :-
     retract(ownedEvolutions(Tag, _)),
     asserta(ownedEvolutions(Tag, New)),
     
+    removeFromTeam(Tag),
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, Evo, A, B, C, D, E, F, G)),
     
-    removeFromTeam(Tag),
     addToTeam(Tag, Evo).
 
 resolveEvolution(rejected) :-
     activePokemon(Tag),
-    owned(Tag, Pokemon, _, _, _, -, _, _, _),
+    owned(Tag, Pokemon, _, _, _, _, _, _, _),
     evolves(Pokemon, Evo, _),
     ownedEvolutions(Tag, Evolutions),
     updateEvolutions(Evo, rejected, Evolutions, New),
@@ -478,14 +479,14 @@ enterBattle:-
 %   generates a random event
 event(Type):- 
     inRoute(Route, _),
-    trainer(Route, _, _, _, no),
+    trainer(Route, _, _, _, _, no),
     Events = [pokemon-35, trainer-35, egg-15, pokeball-15],
     random_between(1, 100, Roll),
     pickEvent(Roll, Events, 0, Type).
 
 event(Type):- 
     inRoute(Route, _),
-    trainer(Route, _, _, _, yes),
+    trainer(Route, _, _, _, _, yes),
     Events = [pokemon-70, egg-15, pokeball-15],
     random_between(1, 100, Roll),
     pickEvent(Roll, Events, 0, Type).
@@ -566,8 +567,8 @@ encounter(Route, trainer):-
 
     % trainer
     random_between(50, 250, Money),
-    retract(trainer(Route, Trainer, _, Pokemon, Defeated)),
-    asserta(trainer(Route, Trainer, Money, Pokemon, Defeated)),
+    retract(trainer(Route, T, G, _, Pokemon, D)),
+    asserta(trainer(Route, T, G, Money, Pokemon, D)),
 
     % set type of fight in winner predicate
     retract(winner(_, _)),
@@ -774,6 +775,7 @@ checkWinner(_):-
 gainedExp(Gained):-
     winner(player, _),
     enemy(_, _, EnemyLevel, _, _, _, _),
+    activePokemon(Tag),
     owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
 
     Gained is EnemyLevel * 15,
@@ -785,6 +787,7 @@ gainedExp(Gained):-
 gainedExp(Gained):-
     winner(draw, _),
     enemy(_, _, EnemyLevel, _, _, _, _),
+    activePokemon(Tag),
     owned(Tag, Pokemon, State, Level, Atk, CurrentHP, MaxHP, Exp, Moves),
 
     Gained is EnemyLevel * 15 / 2,
@@ -801,7 +804,7 @@ gainedMoney(Gained):-
     winner(player, trainer),
 
     inRoute(Route, _),
-    trainer(Route, _, Money, _, _),
+    trainer(Route, _, _, Money, _, _),
     backpack(CurrentMoney, Badges, Pokeballs, Team),
 
     Gained is (Money * 0.5),
@@ -853,8 +856,8 @@ endBattle:-
     winner(player, trainer),
     % mark trainer in route as defeated
     inRoute(R, _),
-    retract(trainer(R, T, M, P, _)),
-    asserta(trainer(R, T, M, P, yes)),
+    retract(trainer(R, T, G, M, P, _)),
+    asserta(trainer(R, T, G, M, P, yes)),
     allowTravel,
     exitBattle.
 
