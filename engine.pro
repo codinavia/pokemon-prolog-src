@@ -94,12 +94,15 @@ forgetMove(Move):-
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, A, B, C, D, E, F, G, New)).
 
+allow([], Limit):- Limit >= 0.
+allow([_ | T], Limit):- Limit > 0, New is Limit - 1, allow(T, New).
+
 %!  resolveMove(+Move, +Choice)
 %   marks move as given choice (must be rejected or learned), will return false if choice = learned and pokemon knows four moves already
 resolveMove(Move, learned):-
     activePokemon(Tag),
     owned(Tag, A, B, C, D, E, F, G, Moves),
-    getLearned(Moves, Learned),
+    getLearned(Moves, Learned), !,
     length(Learned, Length),
     Length < 4,
     updateMoves(Move, learned, Moves, New),
@@ -194,6 +197,21 @@ pokemonStats(Pokemon, Level, Atk, HP, Moves):-
     pokemonMoves(Pokemon, Level, Moves).
 
 % ==== PLAYER ====
+%!  swapTeamComputer(+Tag, +PC)
+%   swaps pokemon in team for one saved in computer given its respective tags
+swapTeamComputer(Team, PC):-
+    backpack(_, _, _, L1),
+    member(Team-ValueT, L1),
+
+    computer(L2),
+    member(PC-ValuePC, L2),
+
+    removeFromTeam(Team),
+    removeFromComputer(PC),
+
+    addToTeam(PC, ValuePC),
+    sendToComputer(Team, ValueT).
+
 %!  addToTeam(+Tag, +Type)
 %   asserts new team with pokemon or egg added
 addToTeam(Tag, Type):-
@@ -206,19 +224,21 @@ addToTeam(Tag, Type):-
 %!  removeFromTeam(+Tag)
 %   new list with given pokemon or egg removed
 removeFromTeam(Tag):-
-    owned(Tag, Pokemon, _, _, _, _, _, _, _),
     backpack(A, B, C, Team),
-    select(Tag-Pokemon, Team, NewTeam),
+    member(Tag-Value, Team),
+    select(Tag-Value, Team, NewTeam),
 
     retract(backpack(_, _, _, _)),
     asserta(backpack(A, B, C, NewTeam)).
 
-removeFromTeam(Tag):-
-    backpack(A, B, C, Team),
-    select(Tag-egg, Team, NewTeam),
+%!  removeFromComputer(+Tag)
+removeFromComputer(Tag):-
+    computer(All),
+    member(Tag-Value, All),
+    select(Tag-Value, All, New),
 
-    retract(backpack(_, _, _, _)),
-    asserta(backpack(A, B, C, NewTeam)).
+    retract(computer(_)),
+    asserta(computer(New)).
 
 %!  sendToComputer(+Tag, +Type)
 sendToComputer(Tag, Type):-
@@ -374,12 +394,12 @@ chooseStarter(Pokemon):-
     addToTeam(Tag, Pokemon),
 
     % pokemon stats
-    Level = 16,
+    Level = 15,
     pokemonStats(Pokemon, Level, Atk, HP, Moves),
     allEvolutions(Pokemon, AllEvolutions),
     evolved(Pokemon, Level, AllEvolutions, Evolutions),
 
-    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 360, Moves)),
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 10000, Moves)),
 
     retractall(ownedEvolutions(_, _)),
     asserta(ownedEvolutions(Tag, Evolutions)).
