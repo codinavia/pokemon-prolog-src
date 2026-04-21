@@ -391,7 +391,7 @@ chooseStarter(Pokemon):-
     addToTeam(Tag, Pokemon),
 
     % pokemon stats
-    Level = 16,
+    Level = 5,
     pokemonStats(Pokemon, Level, Atk, HP, Moves),
     allEvolutions(Pokemon, AllEvolutions),
     evolved(Pokemon, Level, AllEvolutions, Evolutions),
