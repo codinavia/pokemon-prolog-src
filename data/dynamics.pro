@@ -6,7 +6,7 @@
 
 % ==== TRAINERS ====
 :- dynamic gymLeader/4.
-:- dynamic trainer/5.
+:- dynamic trainer/6.
 
 % ==== PLAYER ====
 :- dynamic backpack/4.
@@ -25,7 +25,7 @@
 :- dynamic gymExp/1.
 
 init_game:-
-    retractall(backpack(_, _, _)),                asserta(backpack(0, [], [], [])),
+    retractall(backpack(_, _, _, _)),             asserta(backpack(0, [], [], [])),
     retractall(location(_, _)),                   asserta(location(littleroot, plaza)),
     retractall(activePokemon(_)),                 asserta(activePokemon(none)),
     retractall(playerEggs(_, _, _)),              asserta(playerEggs(none, none, none)),
@@ -34,7 +34,7 @@ init_game:-
 
     retractall(nextTag(_)),                       asserta(nextTag(1)),
     retractall(owned(_, _, _, _, _, _, _, _, _)), asserta(owned(none, none, none, none, none, none, none, none, none)),
-    retractall(enemy(_, _, _, _, _, _, _)),          asserta(enemy(none, none, none, none, none, none, none)), 
+    retractall(enemy(_, _, _, _, _, _, _)),       asserta(enemy(none, none, none, none, none, none, none)), 
     retractall(ownedEvolutions(_, _)),            asserta(ownedEvolutions(none, [])),
     retractall(computer(_)),                      asserta(computer([])),
 
@@ -42,4 +42,4 @@ init_game:-
     retractall(hitWith(_)),                       asserta(hitWith(none)),
     retractall(startingHP(_)),                    asserta(startingHP(none)),
     retractall(queue(_, _)),                      asserta(queue([], none)),
-    retractall(gymExp(_, _)),                     asserta(gymExp([])).
+    retractall(gymExp(_)),                        asserta(gymExp([])).

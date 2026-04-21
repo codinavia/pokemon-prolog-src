@@ -6,11 +6,6 @@
 :- consult('data/pokemon.pro').
 :- consult('data/trainers.pro').
 
-% enemy(pokemon, state, level, atk, current-hp, max-hp, moves)
-% owned(tag, pokemon, state, level, atk, current-hp, max-hp, exp, moves)
-% backpack(money, [pokeballs], [team])
-% owned(tag, pokemon, state, level, atk, current-hp, max-hp, exp, moves)
-
 % ==== HELPERS ====
 %!  addPair(+Key, +Value, +Pairs, -New)
 %   returns new list with element added
@@ -70,6 +65,11 @@ getLearned([], []).
 getLearned([M-learned | T], [M | R]):- getLearned(T, R).
 getLearned([_-_ | T], R):- getLearned(T, R).
 
+% get connected cities to current city
+connectedCities(Cities) :-
+    location(City, _),
+    findall(B, (map(B, _), connected(City, B)), Cities).
+
 % ==== POKEMON ====
 %!  nextLevel(+Level, -RequiredExp)
 %   calculates required experience for next level
@@ -93,9 +93,6 @@ forgetMove(Move):-
     
     retract(owned(Tag, _, _, _, _, _, _, _, _)),
     asserta(owned(Tag, A, B, C, D, E, F, G, New)).
-
-allow([], Limit):- Limit >= 0.
-allow([_ | T], Limit):- Limit > 0, New is Limit - 1, allow(T, New).
 
 %!  resolveMove(+Move, +Choice)
 %   marks move as given choice (must be rejected or learned), will return false if choice = learned and pokemon knows four moves already
@@ -394,12 +391,12 @@ chooseStarter(Pokemon):-
     addToTeam(Tag, Pokemon),
 
     % pokemon stats
-    Level = 15,
+    Level = 16,
     pokemonStats(Pokemon, Level, Atk, HP, Moves),
     allEvolutions(Pokemon, AllEvolutions),
     evolved(Pokemon, Level, AllEvolutions, Evolutions),
 
-    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 10000, Moves)),
+    asserta(owned(Tag, Pokemon, healthy, Level, Atk, HP, HP, 0, Moves)),
 
     retractall(ownedEvolutions(_, _)),
     asserta(ownedEvolutions(Tag, Evolutions)).

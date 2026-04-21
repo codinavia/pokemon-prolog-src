@@ -25,23 +25,6 @@ route(123,      evergrande,       sootopolis,         3200,         yellow).
 route(124,      evergrande,       mossdeep,           5100,         lilac).
 route(125,      sootopolis,       mossdeep,           3400,         yellow).
 
-city(littleroot).
-city(oldale).
-city(petalburg).
-city(dewford).
-city(slateport).
-city(rustboro).
-city(verdanturf).
-city(lavaridge).
-city(fallarbor).
-city(mauville).
-city(fortree).
-city(pacifidlog).
-city(lilycove).
-city(sootopolis).
-city(mossdeep).
-city(evergrande).
-
 % difficulty(color,    lower,       upper)
 difficulty(blue,       2,           4).
 difficulty(red,        4,           7).
@@ -53,9 +36,27 @@ difficulty(royal,      23,          26).
 difficulty(lilac,      27,          30).
 difficulty(yellow,     31,          34).
 
+% map
+map(littleroot,     'Littleroot Town').
+map(oldale,         'Oldale Town').
+map(petalburg,      'Petalburg City').
+map(rustboro,       'Rustboro City').
+map(dewford,        'Dewford Town').
+map(slateport,      'Slateport City').
+map(mauville,       'Mauville City').
+map(verdanturf,     'Verdanturf Town').
+map(fallarbor,      'Fallarbor Town').
+map(lavaridge,      'Lavaridge Town').
+map(fortree,        'Fortree City').
+map(lilycove,       'Lilycove City').
+map(mossdeep,       'Mossdeep City').
+map(sootopolis,     'Sootopolis City').
+map(pacifidlog,     'Pacifidlog Town').
+map(evergrande,     'Ever Grande City').
+
 % gymnasium(city,       leader,     numberOfFights,  badge)
 gymnasium(rustboro,     roxanne,    1,               stone).
-gymnasium(mauville,     wattson,     2,               dynamo).
+gymnasium(mauville,     wattson,    2,               dynamo).
 gymnasium(lavaridge,    flannery,   3,               heat).
 gymnasium(lilycove,     winona,     4,               feather).
 gymnasium(mossdeep,     brawly,     5,               knuckle).

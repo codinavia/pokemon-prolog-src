@@ -28,6 +28,7 @@ type(poliwag,       water).
 type(poliwhirl,     water).
 type(poliwrath,     water).
 type(psyduck,       water).
+type(golduck,       water).
 type(vaporeon,      water).
 
 % ===== GRASS =====
@@ -147,28 +148,28 @@ move('Golpe Cuerpo',     normal,  1,  24).
 move('Vozarrón',         normal,  3,  28).
 move('Derribo',          normal,  3,  30).
 
-% ===== FUEGO =====
+% ===== FIRE =====
 move('Ascuas',           fire,    1,  6).
 move('Colmillo Ígneo',   fire,    2,  12).
 move('Rueda Fuego',      fire,    2,  18).
 move('Giro Fuego',       fire,    1,  24).
 move('Envite Ígneo',     fire,    3,  30).
 
-% ===== AGUA =====
+% ===== WATER =====
 move('Pistola Agua',     water,   1,  6).
 move('Burbuja',          water,   2,  12).
 move('Rayo Burbuja',     water,   1,  18).
 move('Acua Jet',         water,   1,  24).
 move('Hidroariete',      water,   2,  30).
 
-% ===== PLANTA =====
+% ===== GRASS =====
 move('Látigo Cepa',       grass,  1,  6).
 move('Hoja Afilada',      grass,  1,  12).
 move('Hoja Mágica',       grass,  2,  18).
 move('Gigadrenado',       grass,  2,  24).
 move('Rayo Solar',        grass,  3,  30).
 
-% ===== FANTASMA =====
+% ===== GHOST =====
 move('Lengüetazo',        ghost,  30, 6).
 move('Sombra Vil',        ghost,  40, 12).
 move('Garra Umbría',      ghost,  70, 18).
